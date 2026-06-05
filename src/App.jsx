@@ -609,7 +609,7 @@ export default function App() {
       <div className="app-screen menu-screen">
         <div className="menu-container">
           <div className="menu-title-box">
-            <span className="eyebrow">Gerenciador e treinador</span>
+            <span className="eyebrow">Gerenciador e Escalação</span>
             <h1>{TEAM_NAME}</h1>
             <p>
               Cadastre jogadores, monte escalação e organize o banco de
@@ -622,7 +622,7 @@ export default function App() {
             <button className="menu-card" onClick={() => setScreen('cadastro')}>
               <ClipboardList className="menu-icon red" />
               <h2>Cadastro</h2>
-              <p>Adicionar jogadores, editar nome, posição, overall e foto.</p>
+              <p>Adicionar Jogadores, Editar Nome, Posição, Overall e Foto.</p>
             </button>
 
             <button
@@ -630,18 +630,14 @@ export default function App() {
               onClick={() => setScreen('escalação')}
             >
               <LayoutDashboard className="menu-icon red" />
-              <h2>Abrir escalação</h2>
-              <p>Ver campo, titulares e banco como uma escalação real.</p>
+              <h2>Escalação</h2>
+              <p>Alterar Escalação, Titulares e Banco de Reservas.</p>
             </button>
           </div>
 
           <div className="menu-actions">
             <Button className="btn-blue" onClick={saveOnline}>
-              <Save size={16} /> Salvar online
-            </Button>
-
-            <Button className="btn-dark" onClick={loadOnline}>
-              Carregar online
+              <Save size={16} /> Salvar
             </Button>
           </div>
         </div>
@@ -656,10 +652,10 @@ export default function App() {
           <header className="page-header">
             <div>
               <button className="back-link" onClick={() => setScreen('menu')}>
-                <Home size={15} /> Voltar ao menu
+                <Home size={15} /> Menu Principal
               </button>
 
-              <h1>Cadastro</h1>
+              <h1>Cadastro de Jogadores</h1>
               {isLoading && (
                 <p className="muted-text">Sincronizando dados...</p>
               )}
@@ -671,7 +667,7 @@ export default function App() {
               </Button>
 
               <Button className="btn-blue" onClick={saveOnline}>
-                <Save size={16} /> Salvar online
+                <Save size={16} /> Salvar
               </Button>
             </div>
           </header>
@@ -737,7 +733,7 @@ export default function App() {
           <header className="page-header compact">
             <div>
               <button className="back-link" onClick={() => setScreen('menu')}>
-                <Home size={15} /> Voltar ao menu
+                <Home size={15} /> Menu Principal
               </button>
 
               <h1>{TEAM_NAME}</h1>
@@ -776,7 +772,7 @@ export default function App() {
 
           <section className="bench-box">
             <div className="bench-head">
-              <h2>Banco de reservas</h2>
+              <h2>Banco de Reservas</h2>
               <span>{benchPlayers.length} reservas</span>
             </div>
 
@@ -827,7 +823,7 @@ export default function App() {
             </div>
 
             <p className="hint-text">
-              Para alterar nome, posição, overall ou foto, volte ao cadastro.
+              Para Alterar Nome, Posição, Overall ou Foto, Volte ao Cadastro.
             </p>
           </div>
 
@@ -836,11 +832,11 @@ export default function App() {
 
             <div className="save-grid vertical-actions">
               <Button className="btn-blue" onClick={saveOnline}>
-                <Save size={16} /> Salvar online
+                <Save size={16} /> Salvar Alterações
               </Button>
 
               <Button className="btn-red-outline" onClick={exportLineupImage}>
-                <Download size={16} /> Exportar imagem
+                <Download size={16} /> Exportar Escalação
               </Button>
             </div>
           </div>

@@ -148,6 +148,11 @@ img {
   flex-wrap: wrap;
 }
 
+.menu-actions {
+  margin-top: 28px;
+}
+
+
 .btn {
   display: inline-flex;
   align-items: center;
