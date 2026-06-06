@@ -83,6 +83,19 @@ const formations = {
     { role: 'ATA', x: 60, y: 20 },
     { role: 'ATA', x: 40, y: 20 },
   ],
+  '4-1-2-1-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'VOL', x: 50, y: 64 },
+    { role: 'MC', x: 32, y: 49 },
+    { role: 'MC', x: 68, y: 49 },
+    { role: 'MEI', x: 50, y: 35 },
+    { role: 'ATA', x: 38, y: 20 },
+    { role: 'ATA', x: 62, y: 20 },
+  ],
 };
 
 const initialNames = [
@@ -269,6 +282,8 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [draggedItem, setDraggedItem] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOnline, setHasLoadedOnline] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const selectedPlayer = squad.find((player) => player.id === selectedId);
   const lineupPlayers = lineupIds.map((id) =>
@@ -333,10 +348,28 @@ export default function App() {
 
   function changeFormation(nextFormation) {
     setFormation(nextFormation);
-    setPositions(formations[nextFormation]);
+    setPositions(formations[nextFormation] || formations['4-3-3']);
   }
 
   async function saveOnline() {
+    if (!hasLoadedOnline) {
+      alert('Aguarde o app carregar os dados online antes de salvar.');
+      return;
+    }
+
+    if (loadError) {
+      alert(
+        'Não foi possível carregar os dados online. Para evitar apagar dados, o salvamento foi bloqueado. Atualize a página e tente novamente.'
+      );
+      return;
+    }
+
+    const confirmSave = window.confirm(
+      'Deseja salvar a escalação atual no banco online? Isso vai atualizar os dados para todos que usam o app.'
+    );
+
+    if (!confirmSave) return;
+
     setIsLoading(true);
 
     const playersToSave = squad.map((player) => ({
@@ -347,20 +380,9 @@ export default function App() {
       photo: player.photo || null,
     }));
 
-    const { error: deleteError } = await supabase
-      .from('players')
-      .delete()
-      .neq('id', '__nenhum__');
-
-    if (deleteError) {
-      setIsLoading(false);
-      alert('Erro ao limpar jogadores antigos: ' + deleteError.message);
-      return;
-    }
-
     const { error: playersError } = await supabase
       .from('players')
-      .insert(playersToSave);
+      .upsert(playersToSave, { onConflict: 'id' });
 
     if (playersError) {
       setIsLoading(false);
@@ -393,6 +415,8 @@ export default function App() {
 
   async function loadOnline() {
     setIsLoading(true);
+    setLoadError('');
+    setHasLoadedOnline(false);
 
     const { data: playersData, error: playersError } = await supabase
       .from('players')
@@ -401,6 +425,8 @@ export default function App() {
 
     if (playersError) {
       setIsLoading(false);
+      setHasLoadedOnline(false);
+      setLoadError(playersError.message);
       alert('Erro ao carregar jogadores: ' + playersError.message);
       return;
     }
@@ -413,6 +439,8 @@ export default function App() {
 
     if (stateError) {
       setIsLoading(false);
+      setHasLoadedOnline(false);
+      setLoadError(stateError.message);
       alert('Erro ao carregar escalação: ' + stateError.message);
       return;
     }
@@ -429,26 +457,47 @@ export default function App() {
       setSquad(loadedPlayers);
 
       if (stateData) {
-        setFormation(stateData.formation || '4-3-3');
-        setLineupIds(
-          stateData.lineup_ids ||
-            loadedPlayers.slice(0, 11).map((player) => player.id)
+        const validPlayerIds = loadedPlayers.map((player) => player.id);
+
+        const safeLineupIds = (stateData.lineup_ids || []).filter((id) =>
+          validPlayerIds.includes(id)
         );
-        setBenchIds(
-          stateData.bench_ids ||
-            loadedPlayers.slice(11).map((player) => player.id)
+
+        const safeBenchIds = (stateData.bench_ids || []).filter((id) =>
+          validPlayerIds.includes(id)
         );
+
+        const missingIds = validPlayerIds.filter(
+          (id) => !safeLineupIds.includes(id) && !safeBenchIds.includes(id)
+        );
+
+        const finalLineupIds = [...safeLineupIds, ...missingIds].slice(0, 11);
+        const finalBenchIds = [
+          ...safeBenchIds,
+          ...missingIds.filter((id) => !finalLineupIds.includes(id)),
+        ];
+
+        const formationName = stateData.formation || '4-3-3';
+
+        setFormation(formationName);
+        setLineupIds(finalLineupIds);
+        setBenchIds(finalBenchIds);
         setPositions(
-          stateData.positions || formations[stateData.formation || '4-3-3']
+          stateData.positions || formations[formationName] || formations['4-3-3']
         );
-        setSelectedId((stateData.lineup_ids || [loadedPlayers[0]?.id])[0]);
+        setSelectedId(finalLineupIds[0] || loadedPlayers[0]?.id || '');
       } else {
         setLineupIds(loadedPlayers.slice(0, 11).map((player) => player.id));
         setBenchIds(loadedPlayers.slice(11).map((player) => player.id));
         setSelectedId(loadedPlayers[0]?.id || '');
       }
+    } else {
+      setLineupIds(starterSquad.slice(0, 11).map((player) => player.id));
+      setBenchIds(starterSquad.slice(11).map((player) => player.id));
+      setSelectedId(starterSquad[0]?.id || '');
     }
 
+    setHasLoadedOnline(true);
     setIsLoading(false);
   }
 
@@ -604,6 +653,8 @@ export default function App() {
     `${player.name} ${player.role}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const saveButtonDisabled = isLoading || !hasLoadedOnline || Boolean(loadError);
+
   if (screen === 'menu') {
     return (
       <div className="app-screen menu-screen">
@@ -616,6 +667,9 @@ export default function App() {
               reservas.
             </p>
             {isLoading && <p className="muted-text">Sincronizando dados...</p>}
+            {loadError && (
+              <p className="muted-text">Erro ao sincronizar. Atualize a página.</p>
+            )}
           </div>
 
           <div className="menu-grid">
@@ -636,7 +690,11 @@ export default function App() {
           </div>
 
           <div className="menu-actions">
-            <Button className="btn-blue" onClick={saveOnline}>
+            <Button
+              className="btn-blue"
+              onClick={saveOnline}
+              disabled={saveButtonDisabled}
+            >
               <Save size={16} /> Salvar
             </Button>
           </div>
@@ -659,14 +717,25 @@ export default function App() {
               {isLoading && (
                 <p className="muted-text">Sincronizando dados...</p>
               )}
+              {loadError && (
+                <p className="muted-text">Erro ao sincronizar. Atualize a página.</p>
+              )}
             </div>
 
             <div className="header-actions">
-              <Button className="btn-green" onClick={addPlayer}>
+              <Button
+                className="btn-green"
+                onClick={addPlayer}
+                disabled={isLoading}
+              >
                 <Plus size={16} /> Adicionar
               </Button>
 
-              <Button className="btn-blue" onClick={saveOnline}>
+              <Button
+                className="btn-blue"
+                onClick={saveOnline}
+                disabled={saveButtonDisabled}
+              >
                 <Save size={16} /> Salvar
               </Button>
             </div>
@@ -739,6 +808,9 @@ export default function App() {
               <h1>{TEAM_NAME}</h1>
               {isLoading && (
                 <p className="muted-text">Sincronizando dados...</p>
+              )}
+              {loadError && (
+                <p className="muted-text">Erro ao sincronizar. Atualize a página.</p>
               )}
             </div>
 
@@ -831,7 +903,11 @@ export default function App() {
             <h3>Ações</h3>
 
             <div className="save-grid vertical-actions">
-              <Button className="btn-blue" onClick={saveOnline}>
+              <Button
+                className="btn-blue"
+                onClick={saveOnline}
+                disabled={saveButtonDisabled}
+              >
                 <Save size={16} /> Salvar Alterações
               </Button>
 
