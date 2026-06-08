@@ -627,9 +627,13 @@ function getTodayString() {
 }
 
 function formatEventDate(dateValue) {
-  if (!dateValue) return 'Data não definida';
+  if (!dateValue) return 'Data Não Definida';
 
-  if (!year || !month || !day) return dateValue;
+  const [year, month, day] = String(dateValue).split('-');
+
+  if (!year || !month || !day) {
+    return dateValue;
+  }
 
   return `${day}/${month}/${year}`;
 }
