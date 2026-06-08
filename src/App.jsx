@@ -11,6 +11,9 @@ import {
   Search,
   Home,
   Download,
+  CalendarDays,
+  Clock,
+  Pencil,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './App.css';
@@ -132,6 +135,83 @@ const createInitialSquad = () =>
   }));
 
 const starterSquad = createInitialSquad();
+
+const createEmptyEvent = () => ({
+  title: '',
+  eventType: 'treino',
+  eventDate: '',
+  eventTime: '',
+  location: '',
+  opponent: '',
+  description: '',
+  status: 'marcado',
+});
+
+const eventTypeLabels = {
+  jogo: 'Jogo',
+  treino: 'Treino',
+  reuniao: 'Reunião',
+  outro: 'Outro',
+};
+
+const eventStatusLabels = {
+  marcado: 'Marcado',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+};
+
+function getTodayString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatEventDate(dateValue) {
+  if (!dateValue) return 'Data não definida';
+
+  const [year, month, day] = dateValue.split('-');
+
+  if (!year || !month || !day) return dateValue;
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatEventTime(timeValue) {
+  if (!timeValue) return 'Horário a definir';
+
+  return String(timeValue).slice(0, 5);
+}
+
+function getEventDateTime(event) {
+  if (!event?.eventDate) return null;
+
+  const time = event.eventTime || '00:00';
+  return new Date(`${event.eventDate}T${time}`);
+}
+
+function sortEventsByDate(events) {
+  return [...events].sort((eventA, eventB) => {
+    const dateA = getEventDateTime(eventA);
+    const dateB = getEventDateTime(eventB);
+
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+
+    return dateA.getTime() - dateB.getTime();
+  });
+}
+
+function getEventTypeClass(eventType) {
+  return eventType || 'outro';
+}
+
+function getEventStatusClass(status) {
+  return status || 'marcado';
+}
 
 function Button({ children, className = '', ...props }) {
   return (
@@ -284,6 +364,14 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedOnline, setHasLoadedOnline] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [events, setEvents] = useState([]);
+  const [eventForm, setEventForm] = useState(createEmptyEvent());
+  const [editingEventId, setEditingEventId] = useState(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [initialLoadingMessage, setInitialLoadingMessage] = useState(
+    'Carregando informações...'
+  );
 
   const selectedPlayer = squad.find((player) => player.id === selectedId);
   const lineupPlayers = lineupIds.map((id) =>
@@ -294,9 +382,30 @@ export default function App() {
   );
 
   useEffect(() => {
-    loadOnline();
+    loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadInitialData() {
+    setIsInitialLoading(true);
+
+    try {
+      setInitialLoadingMessage('Carregando jogadores e escalação...');
+      await loadOnline({ silent: true });
+
+      setInitialLoadingMessage('Carregando agenda...');
+      await loadEvents({ silent: true });
+
+      setInitialLoadingMessage('Tudo pronto!');
+    } catch (error) {
+      console.warn('Erro no carregamento inicial:', error);
+      setInitialLoadingMessage('Abrindo aplicativo...');
+    } finally {
+      setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 450);
+    }
+  }
 
   function updatePlayer(id, patch) {
     setSquad((previousSquad) =>
@@ -413,7 +522,9 @@ export default function App() {
     alert('Escalação salva online!');
   }
 
-  async function loadOnline() {
+  async function loadOnline(options = {}) {
+    const { silent = false } = options;
+
     setIsLoading(true);
     setLoadError('');
     setHasLoadedOnline(false);
@@ -427,7 +538,11 @@ export default function App() {
       setIsLoading(false);
       setHasLoadedOnline(false);
       setLoadError(playersError.message);
-      alert('Erro ao carregar jogadores: ' + playersError.message);
+
+      if (!silent) {
+        alert('Erro ao carregar jogadores: ' + playersError.message);
+      }
+
       return;
     }
 
@@ -441,7 +556,11 @@ export default function App() {
       setIsLoading(false);
       setHasLoadedOnline(false);
       setLoadError(stateError.message);
-      alert('Erro ao carregar escalação: ' + stateError.message);
+
+      if (!silent) {
+        alert('Erro ao carregar escalação: ' + stateError.message);
+      }
+
       return;
     }
 
@@ -499,6 +618,141 @@ export default function App() {
 
     setHasLoadedOnline(true);
     setIsLoading(false);
+  }
+
+  async function loadEvents(options = {}) {
+    const { silent = false } = options;
+
+    setEventsLoading(true);
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('event_date', { ascending: true })
+      .order('event_time', { ascending: true });
+
+    setEventsLoading(false);
+
+    if (error) {
+      console.error('Erro ao carregar agenda:', error);
+
+      if (!silent) {
+        alert('Erro ao carregar agenda: ' + error.message);
+      }
+
+      return;
+    }
+
+    const loadedEvents = (data || []).map((event) => ({
+      id: event.id,
+      title: event.title,
+      eventType: event.event_type,
+      eventDate: event.event_date,
+      eventTime: event.event_time || '',
+      location: event.location || '',
+      opponent: event.opponent || '',
+      description: event.description || '',
+      status: event.status || 'marcado',
+    }));
+
+    setEvents(sortEventsByDate(loadedEvents));
+  }
+
+  function updateEventForm(patch) {
+    setEventForm((previousForm) => ({
+      ...previousForm,
+      ...patch,
+    }));
+  }
+
+  function startEditEvent(event) {
+    setEditingEventId(event.id);
+
+    setEventForm({
+      title: event.title || '',
+      eventType: event.eventType || 'treino',
+      eventDate: event.eventDate || '',
+      eventTime: event.eventTime || '',
+      location: event.location || '',
+      opponent: event.opponent || '',
+      description: event.description || '',
+      status: event.status || 'marcado',
+    });
+  }
+
+  function cancelEventEdit() {
+    setEditingEventId(null);
+    setEventForm(createEmptyEvent());
+  }
+
+  async function saveEvent() {
+    if (!eventForm.title.trim()) {
+      alert('Digite o título do evento.');
+      return;
+    }
+
+    if (!eventForm.eventDate) {
+      alert('Escolha a data do evento.');
+      return;
+    }
+
+    const payload = {
+      title: eventForm.title.trim(),
+      event_type: eventForm.eventType,
+      event_date: eventForm.eventDate,
+      event_time: eventForm.eventTime || null,
+      location: 'Online',
+      opponent: eventForm.opponent.trim() || null,
+      description: eventForm.description.trim() || null,
+      status: eventForm.status,
+    };
+
+    setEventsLoading(true);
+
+    const { error } = editingEventId
+      ? await supabase.from('events').update(payload).eq('id', editingEventId)
+      : await supabase.from('events').insert(payload);
+
+    setEventsLoading(false);
+
+    if (error) {
+      alert('Erro ao salvar evento: ' + error.message);
+      return;
+    }
+
+    const wasEditing = Boolean(editingEventId);
+
+    setEditingEventId(null);
+    setEventForm(createEmptyEvent());
+
+    await loadEvents();
+
+    alert(wasEditing ? 'Evento atualizado!' : 'Evento adicionado!');
+  }
+
+  async function removeEvent(id) {
+    const confirmDelete = window.confirm('Deseja excluir este evento da agenda?');
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    setEventsLoading(true);
+
+    const { error } = await supabase.from('events').delete().eq('id', id);
+
+    setEventsLoading(false);
+
+    if (error) {
+      alert('Erro ao excluir evento: ' + error.message);
+      return;
+    }
+
+    if (editingEventId === id) {
+      cancelEventEdit();
+    }
+
+    await loadEvents();
   }
 
   function exportLineupImage() {
@@ -653,7 +907,26 @@ export default function App() {
     `${player.name} ${player.role}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const upcomingEvents = events
+    .filter(
+      (event) =>
+        event.status === 'marcado' && event.eventDate >= getTodayString()
+    )
+    .slice(0, 5);
+
   const saveButtonDisabled = isLoading || !hasLoadedOnline || Boolean(loadError);
+
+  if (isInitialLoading) {
+    return (
+      <div className="app-screen loading-screen">
+        <div className="loading-card">
+          <div className="loading-spinner" />
+          <h1>{TEAM_NAME}</h1>
+          <p>{initialLoadingMessage}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === 'menu') {
     return (
@@ -676,22 +949,19 @@ export default function App() {
             <button className="menu-card" onClick={() => setScreen('cadastro')}>
               <ClipboardList className="menu-icon red" />
               <h2>Cadastro</h2>
-              <p>Adicionar Jogadores, Editar Nome, Posição, Overall e Foto.</p>
+              <p>Adicionar jogadores, editar nome, posição, overall e foto.</p>
             </button>
 
             <button className="menu-card" onClick={() => setScreen('agenda')}>
               <CalendarDays className="menu-icon red" />
               <h2>Agenda</h2>
-              <p>Organizar jogos, treinos, reuniões, horários e locais do time.</p>
+              <p>Organizar jogos, treinos, reuniões e horários do time.</p>
             </button>
 
-            <button
-              className="menu-card"
-              onClick={() => setScreen('escalação')}
-            >
+            <button className="menu-card" onClick={() => setScreen('escalação')}>
               <LayoutDashboard className="menu-icon red" />
               <h2>Escalação</h2>
-              <p>Alterar Escalação, Titulares e Banco de Reservas.</p>
+              <p>Alterar escalação, titulares e banco de reservas.</p>
             </button>
           </div>
 
@@ -729,11 +999,7 @@ export default function App() {
             </div>
 
             <div className="header-actions">
-              <Button
-                className="btn-green"
-                onClick={addPlayer}
-                disabled={isLoading}
-              >
+              <Button className="btn-green" onClick={addPlayer} disabled={isLoading}>
                 <Plus size={16} /> Adicionar
               </Button>
 
@@ -801,6 +1067,216 @@ export default function App() {
     );
   }
 
+  if (screen === 'agenda') {
+    return (
+      <div className="app-screen">
+        <div className="page-wrap">
+          <header className="page-header">
+            <div>
+              <button className="back-link" onClick={() => setScreen('menu')}>
+                <Home size={15} /> Menu Principal
+              </button>
+
+              <h1>Agenda</h1>
+
+              {eventsLoading && (
+                <p className="muted-text">Sincronizando agenda...</p>
+              )}
+            </div>
+
+            <div className="header-actions">
+              <Button className="btn-blue" onClick={loadEvents}>
+                <CalendarDays size={16} /> Atualizar agenda
+              </Button>
+            </div>
+          </header>
+
+          <div className="agenda-layout">
+            <section className="side-card agenda-form-card">
+              <h3>{editingEventId ? 'Editar evento' : 'Novo evento'}</h3>
+
+              <div className="form-grid">
+                <div className="form-group full">
+                  <label>Título</label>
+                  <input
+                    value={eventForm.title}
+                    onChange={(event) =>
+                      updateEventForm({ title: event.target.value })
+                    }
+                    placeholder="Ex: Treino de sábado"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Tipo</label>
+                  <select
+                    value={eventForm.eventType}
+                    onChange={(event) =>
+                      updateEventForm({ eventType: event.target.value })
+                    }
+                  >
+                    <option value="treino">Treino</option>
+                    <option value="jogo">Jogo</option>
+                    <option value="reuniao">Reunião</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    value={eventForm.status}
+                    onChange={(event) =>
+                      updateEventForm({ status: event.target.value })
+                    }
+                  >
+                    <option value="marcado">Marcado</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Data</label>
+                  <input
+                    type="date"
+                    value={eventForm.eventDate}
+                    onChange={(event) =>
+                      updateEventForm({ eventDate: event.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Horário</label>
+                  <input
+                    type="time"
+                    value={eventForm.eventTime}
+                    onChange={(event) =>
+                      updateEventForm({ eventTime: event.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="form-group full">
+                  <label>Adversário</label>
+                  <input
+                    value={eventForm.opponent}
+                    onChange={(event) =>
+                      updateEventForm({ opponent: event.target.value })
+                    }
+                    placeholder="Ex: Amigos FC"
+                  />
+                </div>
+
+                <div className="form-group full">
+                  <label>Observações</label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={(event) =>
+                      updateEventForm({ description: event.target.value })
+                    }
+                    placeholder="Ex: Levar uniforme vermelho"
+                  />
+                </div>
+              </div>
+
+              <div className="agenda-form-actions">
+                <Button className="btn-blue" onClick={saveEvent}>
+                  <Save size={16} />
+                  {editingEventId ? 'Salvar alterações' : 'Adicionar evento'}
+                </Button>
+
+                {editingEventId && (
+                  <Button className="btn-dark" onClick={cancelEventEdit}>
+                    Cancelar edição
+                  </Button>
+                )}
+              </div>
+            </section>
+
+            <section className="main-card">
+              <div className="agenda-head">
+                <div>
+                  <h2>Próximos eventos</h2>
+                  <p className="muted-text">
+                    {upcomingEvents.length} evento(s) marcado(s)
+                  </p>
+                </div>
+              </div>
+
+              <div className="events-list">
+                {events.length === 0 && (
+                  <div className="empty-agenda">
+                    Nenhum evento cadastrado ainda.
+                  </div>
+                )}
+
+                {events.map((event) => (
+                  <article key={event.id} className="event-card">
+                    <div className="event-main">
+                      <div className={`event-type-badge ${getEventTypeClass(event.eventType)}`}>
+                        {eventTypeLabels[event.eventType] || event.eventType}
+                      </div>
+
+                      <h3>{event.title}</h3>
+
+                      <div className="event-meta">
+                        <span>
+                          <CalendarDays size={15} />
+                          {formatEventDate(event.eventDate)}
+                        </span>
+
+                        <span>
+                          <Clock size={15} />
+                          {formatEventTime(event.eventTime)}
+                        </span>
+                      </div>
+
+                      {event.opponent && (
+                        <p className="event-opponent">
+                          Adversário: <strong>{event.opponent}</strong>
+                        </p>
+                      )}
+
+                      {event.description && (
+                        <p className="event-description">{event.description}</p>
+                      )}
+                    </div>
+
+                    <div className="event-side">
+                      <span className={`event-status ${getEventStatusClass(event.status)}`}>
+                        {eventStatusLabels[event.status] || event.status}
+                      </span>
+
+                      <div className="event-actions">
+                        <button
+                          className="icon-action"
+                          onClick={() => startEditEvent(event)}
+                          title="Editar evento"
+                        >
+                          <Pencil size={17} />
+                        </button>
+
+                        <button
+                          className="icon-action danger"
+                          onClick={() => removeEvent(event.id)}
+                          title="Excluir evento"
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-screen">
       <div className="lineup-layout">
@@ -841,7 +1317,7 @@ export default function App() {
                 slot={slot}
                 player={lineupPlayers[index]}
                 selected={lineupPlayers[index]?.id === selectedId}
-                onClick={() => setSelectedId(lineupPlayers[index]?.id)}
+                onClick={() => setSelectedId(lineupPlayers[index]?.id || '')}
                 onDragStart={() => setDraggedItem({ type: 'starter', index })}
                 onDrop={() => handleDropOnStarter(index)}
               />
@@ -865,7 +1341,7 @@ export default function App() {
                   className={`bench-card ${
                     selectedId === player?.id ? 'selected' : ''
                   }`}
-                  onClick={() => setSelectedId(player?.id)}
+                  onClick={() => setSelectedId(player?.id || '')}
                   title="Arraste para trocar com outro reserva ou titular"
                 >
                   <PlayerAvatar
@@ -901,7 +1377,7 @@ export default function App() {
             </div>
 
             <p className="hint-text">
-              Para Alterar Nome, Posição, Overall ou Foto, Volte ao Cadastro.
+              Para alterar nome, posição, overall ou foto, volte ao cadastro.
             </p>
           </div>
 
@@ -914,11 +1390,11 @@ export default function App() {
                 onClick={saveOnline}
                 disabled={saveButtonDisabled}
               >
-                <Save size={16} /> Salvar Alterações
+                <Save size={16} /> Salvar alterações
               </Button>
 
               <Button className="btn-red-outline" onClick={exportLineupImage}>
-                <Download size={16} /> Exportar Escalação
+                <Download size={16} /> Exportar escalação
               </Button>
             </div>
           </div>
