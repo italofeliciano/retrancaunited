@@ -589,6 +589,8 @@ const createInitialSquad = () =>
         : ['GOL', 'ZAG', 'LAT', 'VOL', 'MEI', 'ATA', 'ATA'][index - 11],
     rating: index < 11 ? '85' : '80',
     photo: '',
+    shirtNumber: String(index + 1),
+    isCaptain: false,
   }));
 
 const starterSquad = createInitialSquad();
@@ -757,6 +759,10 @@ function FieldPlayer({ slot, player, selected, onClick, onDragStart, onDrop }) {
       <div className="field-photo-wrap">
         <PlayerAvatar player={player} className="field-photo" />
         <span className="rating-badge">{player?.rating || '--'}</span>
+        {player?.shirtNumber && (
+        <span className="shirt-badge">#{player.shirtNumber}</span>
+        )}
+        {player?.isCaptain && <span className="captain-badge">C</span>}
       </div>
 
       <div className="field-name-tag">
@@ -810,6 +816,19 @@ function PlayerForm({ player, onChange, onPhoto, title }) {
             }
           />
         </div>
+
+        <div className="form-group full">
+          <label>Número Da Camisa</label>
+          <input
+            value={player.shirtNumber || ''}
+            onChange={(event) =>
+              onChange({
+                shirtNumber: event.target.value.replace(/\D/g, '').slice(0, 3),
+              })
+            }
+            placeholder="Ex: 10"
+          />
+        </div>
       </div>
 
       <input
@@ -825,6 +844,15 @@ function PlayerForm({ player, onChange, onPhoto, title }) {
         onClick={() => document.getElementById('photoUpload')?.click()}
       >
         <Upload size={16} /> Colocar foto
+      </Button>
+
+      <Button
+        className={player.isCaptain ? 'btn-green full-button' : 'btn-red-outline full-button'}
+        onClick={() => onChange({ isCaptain: true })}
+        disabled={player.isCaptain}
+      >
+        <Shield size={16} />
+        {player.isCaptain ? 'Capitão Do Time' : 'Definir Como Capitão'}
       </Button>
     </div>
   );
@@ -901,6 +929,15 @@ export default function App() {
     );
   }
 
+  function setCaptain(id) {
+    setSquad((previousSquad) =>
+      previousSquad.map((player) => ({
+        ...player,
+        isCaptain: player.id === id,
+      }))
+    );
+  }
+
   function addPlayer() {
     const newPlayer = {
       id: `jogador-${Date.now()}`,
@@ -908,6 +945,8 @@ export default function App() {
       role: 'ATA',
       rating: '80',
       photo: '',
+      shirtNumber: '',
+      isCaptain: false,
     };
 
     setSquad((previousSquad) => [...previousSquad, newPlayer]);
@@ -973,6 +1012,8 @@ export default function App() {
       role: player.role || 'ATA',
       rating: player.rating || '80',
       photo: player.photo || null,
+      shirt_number: player.shirtNumber || null,
+      is_captain: Boolean(player.isCaptain),
     }));
 
     const { error: playersError } = await supabase
@@ -1057,6 +1098,8 @@ export default function App() {
         role: player.role,
         rating: player.rating,
         photo: player.photo || '',
+        shirtNumber: player.shirt_number || '',
+        isCaptain: Boolean(player.is_captain),
       }));
 
       setSquad(loadedPlayers);
@@ -1601,6 +1644,7 @@ export default function App() {
                     <div className="player-row-info">
                       <strong>{player.name}</strong>
                       <span>
+                        {player.isCaptain ? 'C • ' : ''}
                         {player.role} • OVR {player.rating}
                       </span>
                     </div>
@@ -1621,7 +1665,14 @@ export default function App() {
             <PlayerForm
               player={selectedPlayer}
               title="Editar cadastro"
-              onChange={(patch) => updatePlayer(selectedPlayer.id, patch)}
+              onChange={(patch) => {
+                if (patch.isCaptain) {
+                  setCaptain(selectedPlayer.id);
+                  return;
+                }
+
+                updatePlayer(selectedPlayer.id, patch);
+              }}
               onPhoto={handlePhoto}
             />
           </div>
@@ -1933,7 +1984,8 @@ export default function App() {
                   />
 
                   <strong>
-                    R{index + 1} • {player?.role}
+                    {player?.isCaptain ? 'C • ' : ''}
+                    {player?.shirtNumber ? `#${player.shirtNumber}` : `R${index + 1}`} • {player?.role}
                   </strong>
                   <span>{player?.name}</span>
                 </button>
@@ -1952,8 +2004,10 @@ export default function App() {
               <div>
                 <strong>{selectedPlayer?.name || 'Nenhum jogador'}</strong>
                 <span>
-                  {selectedPlayer?.role || '--'} • OVR{' '}
-                  {selectedPlayer?.rating || '--'}
+                {selectedPlayer?.isCaptain ? 'Capitão • ' : ''}
+                {selectedPlayer?.shirtNumber ? `#${selectedPlayer.shirtNumber} • ` : ''}
+                {selectedPlayer?.role || '--'} • OVR{' '}
+                {selectedPlayer?.rating || '--'}
                 </span>
               </div>
             </div>
