@@ -679,6 +679,12 @@ export default function App() {
               <p>Adicionar Jogadores, Editar Nome, Posição, Overall e Foto.</p>
             </button>
 
+            <button className="menu-card" onClick={() => setScreen('agenda')}>
+              <CalendarDays className="menu-icon red" />
+              <h2>Agenda</h2>
+              <p>Organizar jogos, treinos, reuniões, horários e locais do time.</p>
+            </button>
+
             <button
               className="menu-card"
               onClick={() => setScreen('escalação')}
