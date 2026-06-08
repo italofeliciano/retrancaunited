@@ -19,10 +19,278 @@ import { supabase } from './supabaseClient';
 import './App.css';
 
 const TEAM_NAME = 'Retranca United';
+const TEAM_LOGO = '/escudo.png';
 
 const VAPID_PUBLIC_KEY = 'BGwx5J-AxNT6yFdGTlHJcnJs0gPzPEE9B-c7lgDIAps5oh_Ndkuny3JeFNq4_LfdLYDhnqudB04Ywb9A-6dy4Gg';
 
 const formations = {
+
+  '5-2-1-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ALA', x: 88, y: 62 },
+    { role: 'ZAG', x: 70, y: 72 },
+    { role: 'ZAG', x: 50, y: 76 },
+    { role: 'ZAG', x: 30, y: 72 },
+    { role: 'ALA', x: 12, y: 62 },
+    { role: 'MC', x: 62, y: 48 },
+    { role: 'MC', x: 38, y: 48 },
+    { role: 'MEI', x: 50, y: 34 },
+    { role: 'ATA', x: 60, y: 17 },
+    { role: 'ATA', x: 40, y: 17 },
+  ],
+  
+  '5-2-2-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ALA', x: 88, y: 62 },
+    { role: 'ZAG', x: 70, y: 72 },
+    { role: 'ZAG', x: 50, y: 76 },
+    { role: 'ZAG', x: 30, y: 72 },
+    { role: 'ALA', x: 12, y: 62 },
+    { role: 'MC', x: 62, y: 50 },
+    { role: 'MC', x: 38, y: 50 },
+    { role: 'MEI', x: 67, y: 34 },
+    { role: 'MEI', x: 33, y: 34 },
+    { role: 'ATA', x: 50, y: 17 },
+  ],
+  
+  '5-3-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ALA', x: 88, y: 62 },
+    { role: 'ZAG', x: 70, y: 72 },
+    { role: 'ZAG', x: 50, y: 76 },
+    { role: 'ZAG', x: 30, y: 72 },
+    { role: 'ALA', x: 12, y: 62 },
+    { role: 'MC', x: 68, y: 48 },
+    { role: 'MC', x: 50, y: 53 },
+    { role: 'MC', x: 32, y: 48 },
+    { role: 'ATA', x: 60, y: 19 },
+    { role: 'ATA', x: 40, y: 19 },
+  ],
+  
+  '5-4-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ALA', x: 88, y: 64 },
+    { role: 'ZAG', x: 70, y: 73 },
+    { role: 'ZAG', x: 50, y: 77 },
+    { role: 'ZAG', x: 30, y: 73 },
+    { role: 'ALA', x: 12, y: 64 },
+    { role: 'ME', x: 20, y: 47 },
+    { role: 'MC', x: 42, y: 51 },
+    { role: 'MC', x: 58, y: 51 },
+    { role: 'MD', x: 80, y: 47 },
+    { role: 'ATA', x: 50, y: 19 },
+  ],
+  
+  '5-4-1 DEF': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ALA', x: 88, y: 66 },
+    { role: 'ZAG', x: 70, y: 75 },
+    { role: 'ZAG', x: 50, y: 79 },
+    { role: 'ZAG', x: 30, y: 75 },
+    { role: 'ALA', x: 12, y: 66 },
+    { role: 'ME', x: 20, y: 52 },
+    { role: 'MC', x: 42, y: 56 },
+    { role: 'MC', x: 58, y: 56 },
+    { role: 'MD', x: 80, y: 52 },
+    { role: 'ATA', x: 50, y: 24 },
+  ],
+
+  '4-1-2-1-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'MC', x: 68, y: 49 },
+    { role: 'MC', x: 32, y: 49 },
+    { role: 'MEI', x: 50, y: 35 },
+    { role: 'ATA', x: 60, y: 18 },
+    { role: 'ATA', x: 40, y: 18 },
+  ],
+
+  '4-1-2-1-2 (2)': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 63 },
+    { role: 'MC', x: 66, y: 50 },
+    { role: 'MC', x: 34, y: 50 },
+    { role: 'MEI', x: 50, y: 38 },
+    { role: 'ATA', x: 59, y: 20 },
+    { role: 'ATA', x: 41, y: 20 },
+  ],
+
+  '4-1-2-1-2 FECH': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 84, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 16, y: 75 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'MC', x: 61, y: 49 },
+    { role: 'MC', x: 39, y: 49 },
+    { role: 'MEI', x: 50, y: 36 },
+    { role: 'ATA', x: 58, y: 19 },
+    { role: 'ATA', x: 42, y: 19 },
+  ],
+
+  '4-1-2-1-2 ABER': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 86, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 14, y: 75 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'MC', x: 72, y: 50 },
+    { role: 'MC', x: 28, y: 50 },
+    { role: 'MEI', x: 50, y: 36 },
+    { role: 'ATA', x: 61, y: 19 },
+    { role: 'ATA', x: 39, y: 19 },
+  ],
+
+  '4-1-3-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'ME', x: 24, y: 48 },
+    { role: 'MC', x: 50, y: 47 },
+    { role: 'MD', x: 76, y: 48 },
+    { role: 'ATA', x: 60, y: 19 },
+    { role: 'ATA', x: 40, y: 19 },
+  ],
+
+  '4-1-4-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 64 },
+    { role: 'ME', x: 16, y: 48 },
+    { role: 'MC', x: 39, y: 49 },
+    { role: 'MC', x: 61, y: 49 },
+    { role: 'MD', x: 84, y: 48 },
+    { role: 'ATA', x: 50, y: 21 },
+  ],
+
+  '4-2-1-3': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 62 },
+    { role: 'VOL', x: 40, y: 62 },
+    { role: 'MEI', x: 50, y: 44 },
+    { role: 'PD', x: 80, y: 22 },
+    { role: 'ATA', x: 50, y: 18 },
+    { role: 'PE', x: 20, y: 22 },
+  ],
+
+  '4-2-2-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 62 },
+    { role: 'VOL', x: 40, y: 62 },
+    { role: 'MEI', x: 68, y: 43 },
+    { role: 'MEI', x: 32, y: 43 },
+    { role: 'ATA', x: 60, y: 20 },
+    { role: 'ATA', x: 40, y: 20 },
+  ],
+
+  '4-2-3-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 62 },
+    { role: 'VOL', x: 40, y: 62 },
+    { role: 'MD', x: 78, y: 42 },
+    { role: 'MEI', x: 50, y: 38 },
+    { role: 'ME', x: 22, y: 42 },
+    { role: 'ATA', x: 50, y: 19 },
+  ],
+
+  '4-2-3-1 FECH': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 63 },
+    { role: 'VOL', x: 40, y: 63 },
+    { role: 'MEI', x: 64, y: 44 },
+    { role: 'MEI', x: 50, y: 37 },
+    { role: 'MEI', x: 36, y: 44 },
+    { role: 'ATA', x: 50, y: 20 },
+  ],
+
+  '4-2-3-1 ABER': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 62 },
+    { role: 'VOL', x: 40, y: 62 },
+    { role: 'MD', x: 86, y: 43 },
+    { role: 'MEI', x: 50, y: 38 },
+    { role: 'ME', x: 14, y: 43 },
+    { role: 'ATA', x: 50, y: 19 },
+  ],
+
+  '4-2-4': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 60, y: 60 },
+    { role: 'VOL', x: 40, y: 60 },
+    { role: 'PD', x: 84, y: 24 },
+    { role: 'ATA', x: 60, y: 20 },
+    { role: 'ATA', x: 40, y: 20 },
+    { role: 'PE', x: 16, y: 24 },
+  ],
+
+  '4-3-1-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'MC', x: 67, y: 55 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'MC', x: 33, y: 55 },
+    { role: 'MEI', x: 50, y: 40 },
+    { role: 'ATA', x: 60, y: 20 },
+    { role: 'ATA', x: 40, y: 20 },
+  ],
+
+  '4-3-2-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'MC', x: 67, y: 55 },
+    { role: 'VOL', x: 50, y: 62 },
+    { role: 'MC', x: 33, y: 55 },
+    { role: 'MEI', x: 60, y: 39 },
+    { role: 'MEI', x: 40, y: 39 },
+    { role: 'ATA', x: 50, y: 19 },
+  ],
+
   '4-3-3': [
     { role: 'GOL', x: 50, y: 91 },
     { role: 'LD', x: 83, y: 75 },
@@ -33,9 +301,108 @@ const formations = {
     { role: 'MC', x: 67, y: 48 },
     { role: 'MC', x: 33, y: 48 },
     { role: 'PD', x: 82, y: 25 },
-    { role: 'CA', x: 50, y: 16 },
+    { role: 'ATA', x: 50, y: 16 },
     { role: 'PE', x: 18, y: 25 },
   ],
+
+  '4-3-3 ATA': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'MC', x: 67, y: 53 },
+    { role: 'MC', x: 50, y: 58 },
+    { role: 'MC', x: 33, y: 53 },
+    { role: 'PD', x: 82, y: 23 },
+    { role: 'ATA', x: 50, y: 17 },
+    { role: 'PE', x: 18, y: 23 },
+  ],
+
+  '4-3-3 DEF': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 64 },
+    { role: 'MC', x: 67, y: 54 },
+    { role: 'MC', x: 33, y: 54 },
+    { role: 'PD', x: 82, y: 25 },
+    { role: 'ATA', x: 50, y: 18 },
+    { role: 'PE', x: 18, y: 25 },
+  ],
+
+  '4-3-3 F9': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'MC', x: 67, y: 53 },
+    { role: 'MC', x: 50, y: 58 },
+    { role: 'MC', x: 33, y: 53 },
+    { role: 'PD', x: 82, y: 23 },
+    { role: 'F9', x: 50, y: 28 },
+    { role: 'PE', x: 18, y: 23 },
+  ],
+
+  '4-3-3 HOLD': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'VOL', x: 50, y: 65 },
+    { role: 'MC', x: 67, y: 54 },
+    { role: 'MC', x: 33, y: 54 },
+    { role: 'PD', x: 82, y: 24 },
+    { role: 'ATA', x: 50, y: 18 },
+    { role: 'PE', x: 18, y: 24 },
+  ],
+
+  '4-4-1-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 16, y: 52 },
+    { role: 'MC', x: 39, y: 55 },
+    { role: 'MC', x: 61, y: 55 },
+    { role: 'MD', x: 84, y: 52 },
+    { role: 'MEI', x: 50, y: 38 },
+    { role: 'ATA', x: 50, y: 20 },
+  ],
+
+  '4-4-1-1 ATA': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 16, y: 51 },
+    { role: 'MC', x: 39, y: 55 },
+    { role: 'MC', x: 61, y: 55 },
+    { role: 'MD', x: 84, y: 51 },
+    { role: 'MEI', x: 50, y: 35 },
+    { role: 'ATA', x: 50, y: 18 },
+  ],
+
+  '4-4-1-1 MEIO': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 16, y: 53 },
+    { role: 'MC', x: 39, y: 57 },
+    { role: 'MC', x: 61, y: 57 },
+    { role: 'MD', x: 84, y: 53 },
+    { role: 'MEI', x: 50, y: 43 },
+    { role: 'ATA', x: 50, y: 23 },
+  ],
+
   '4-4-2': [
     { role: 'GOL', x: 50, y: 91 },
     { role: 'LD', x: 83, y: 75 },
@@ -49,57 +416,145 @@ const formations = {
     { role: 'ATA', x: 60, y: 20 },
     { role: 'ATA', x: 40, y: 20 },
   ],
-  '4-2-3-1': [
+
+  '4-4-2 HOLD': [
     { role: 'GOL', x: 50, y: 91 },
-    { role: 'LD', x: 83, y: 75 },
-    { role: 'ZAG', x: 61, y: 80 },
-    { role: 'ZAG', x: 39, y: 80 },
-    { role: 'LE', x: 17, y: 75 },
-    { role: 'VOL', x: 60, y: 61 },
-    { role: 'VOL', x: 40, y: 61 },
-    { role: 'PD', x: 78, y: 39 },
-    { role: 'MEI', x: 50, y: 36 },
-    { role: 'PE', x: 22, y: 39 },
-    { role: 'CA', x: 50, y: 17 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 16, y: 52 },
+    { role: 'VOL', x: 40, y: 60 },
+    { role: 'VOL', x: 60, y: 60 },
+    { role: 'MD', x: 84, y: 52 },
+    { role: 'ATA', x: 60, y: 21 },
+    { role: 'ATA', x: 40, y: 21 },
   ],
+
+  '4-5-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 14, y: 52 },
+    { role: 'MC', x: 33, y: 56 },
+    { role: 'MC', x: 50, y: 59 },
+    { role: 'MC', x: 67, y: 56 },
+    { role: 'MD', x: 86, y: 52 },
+    { role: 'ATA', x: 50, y: 20 },
+  ],
+
+  '4-5-1 ABER': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'ME', x: 12, y: 50 },
+    { role: 'MC', x: 33, y: 56 },
+    { role: 'MC', x: 50, y: 59 },
+    { role: 'MC', x: 67, y: 56 },
+    { role: 'MD', x: 88, y: 50 },
+    { role: 'ATA', x: 50, y: 20 },
+  ],
+
+  '4-5-1 FECH': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'LD', x: 85, y: 75 },
+    { role: 'ZAG', x: 62, y: 80 },
+    { role: 'ZAG', x: 38, y: 80 },
+    { role: 'LE', x: 15, y: 75 },
+    { role: 'MC', x: 30, y: 54 },
+    { role: 'MC', x: 43, y: 58 },
+    { role: 'MC', x: 57, y: 58 },
+    { role: 'MC', x: 70, y: 54 },
+    { role: 'MEI', x: 50, y: 43 },
+    { role: 'ATA', x: 50, y: 21 },
+  ],
+
+  '3-1-4-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'VOL', x: 50, y: 61 },
+    { role: 'ME', x: 15, y: 47 },
+    { role: 'MC', x: 38, y: 49 },
+    { role: 'MC', x: 62, y: 49 },
+    { role: 'MD', x: 85, y: 47 },
+    { role: 'ATA', x: 60, y: 19 },
+    { role: 'ATA', x: 40, y: 19 },
+  ],
+  
+  '3-4-1-2': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'ME', x: 15, y: 49 },
+    { role: 'MC', x: 38, y: 54 },
+    { role: 'MC', x: 62, y: 54 },
+    { role: 'MD', x: 85, y: 49 },
+    { role: 'MEI', x: 50, y: 38 },
+    { role: 'ATA', x: 60, y: 19 },
+    { role: 'ATA', x: 40, y: 19 },
+  ],
+  
+  '3-4-2-1': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'ME', x: 15, y: 49 },
+    { role: 'MC', x: 38, y: 54 },
+    { role: 'MC', x: 62, y: 54 },
+    { role: 'MD', x: 85, y: 49 },
+    { role: 'MEI', x: 60, y: 37 },
+    { role: 'MEI', x: 40, y: 37 },
+    { role: 'ATA', x: 50, y: 19 },
+  ],
+  
+  '3-4-3': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'ME', x: 15, y: 49 },
+    { role: 'MC', x: 38, y: 54 },
+    { role: 'MC', x: 62, y: 54 },
+    { role: 'MD', x: 85, y: 49 },
+    { role: 'PD', x: 78, y: 22 },
+    { role: 'ATA', x: 50, y: 18 },
+    { role: 'PE', x: 22, y: 22 },
+  ],
+  
+  '3-4-3 ABER': [
+    { role: 'GOL', x: 50, y: 91 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'ME', x: 12, y: 49 },
+    { role: 'MC', x: 38, y: 54 },
+    { role: 'MC', x: 62, y: 54 },
+    { role: 'MD', x: 88, y: 49 },
+    { role: 'PD', x: 82, y: 22 },
+    { role: 'ATA', x: 50, y: 18 },
+    { role: 'PE', x: 18, y: 22 },
+  ],
+  
   '3-5-2': [
     { role: 'GOL', x: 50, y: 91 },
-    { role: 'ZAG', x: 65, y: 78 },
-    { role: 'ZAG', x: 50, y: 82 },
-    { role: 'ZAG', x: 35, y: 78 },
-    { role: 'ALA', x: 84, y: 54 },
-    { role: 'VOL', x: 59, y: 61 },
-    { role: 'VOL', x: 41, y: 61 },
-    { role: 'MEI', x: 50, y: 42 },
-    { role: 'ALA', x: 16, y: 54 },
-    { role: 'ATA', x: 60, y: 20 },
-    { role: 'ATA', x: 40, y: 20 },
-  ],
-  '5-3-2': [
-    { role: 'GOL', x: 50, y: 91 },
-    { role: 'ALA', x: 88, y: 68 },
-    { role: 'ZAG', x: 68, y: 79 },
-    { role: 'ZAG', x: 50, y: 82 },
-    { role: 'ZAG', x: 32, y: 79 },
-    { role: 'ALA', x: 12, y: 68 },
-    { role: 'MC', x: 65, y: 50 },
-    { role: 'VOL', x: 50, y: 59 },
-    { role: 'MC', x: 35, y: 50 },
-    { role: 'ATA', x: 60, y: 20 },
-    { role: 'ATA', x: 40, y: 20 },
-  ],
-  '4-1-2-1-2': [
-    { role: 'GOL', x: 50, y: 91 },
-    { role: 'LE', x: 15, y: 75 },
-    { role: 'ZAG', x: 38, y: 80 },
-    { role: 'ZAG', x: 62, y: 80 },
-    { role: 'LD', x: 85, y: 75 },
-    { role: 'VOL', x: 50, y: 64 },
-    { role: 'MC', x: 32, y: 49 },
-    { role: 'MC', x: 68, y: 49 },
-    { role: 'MEI', x: 50, y: 35 },
-    { role: 'ATA', x: 38, y: 20 },
-    { role: 'ATA', x: 62, y: 20 },
+    { role: 'ZAG', x: 68, y: 74 },
+    { role: 'ZAG', x: 50, y: 78 },
+    { role: 'ZAG', x: 32, y: 74 },
+    { role: 'ME', x: 15, y: 51 },
+    { role: 'MC', x: 35, y: 54 },
+    { role: 'MC', x: 50, y: 57 },
+    { role: 'MC', x: 65, y: 54 },
+    { role: 'MD', x: 85, y: 51 },
+    { role: 'ATA', x: 60, y: 19 },
+    { role: 'ATA', x: 40, y: 19 },
   ],
 };
 
@@ -174,8 +629,6 @@ function getTodayString() {
 function formatEventDate(dateValue) {
   if (!dateValue) return 'Data não definida';
 
-  const [year, month, day] = dateValue.split('-');
-
   if (!year || !month || !day) return dateValue;
 
   return `${day}/${month}/${year}`;
@@ -236,6 +689,14 @@ function Button({ children, className = '', ...props }) {
     <button className={`btn ${className}`} {...props}>
       {children}
     </button>
+  );
+}
+
+function TeamLogo({ className = '' }) {
+  return (
+    <div className={`team-logo-wrap ${className}`}>
+      <img src={TEAM_LOGO} alt={`Escudo ${TEAM_NAME}`} />
+    </div>
   );
 }
 
@@ -410,17 +871,17 @@ export default function App() {
     setIsInitialLoading(true);
 
     try {
-      setInitialLoadingMessage('Carregando jogadores e escalação...');
+      setInitialLoadingMessage('Carregando Jogadores E Escalação...');
       await loadOnline({ silent: true });
 
-      setInitialLoadingMessage('Carregando agenda...');
+      setInitialLoadingMessage('Carregando Agenda...');
       await loadEvents({ silent: true });
       checkNotificationSupport();
 
-      setInitialLoadingMessage('Tudo pronto!');
+      setInitialLoadingMessage('Tudo Pronto!');
     } catch (error) {
-      console.warn('Erro no carregamento inicial:', error);
-      setInitialLoadingMessage('Abrindo aplicativo...');
+      console.warn('Erro No Carregamento Inicial:', error);
+      setInitialLoadingMessage('Abrindo Aplicativo...');
     } finally {
       setTimeout(() => {
         setIsInitialLoading(false);
@@ -1023,6 +1484,7 @@ export default function App() {
     return (
       <div className="app-screen loading-screen">
         <div className="loading-card">
+        <TeamLogo className="loading-team-logo" />
           <div className="loading-spinner" />
           <h1>{TEAM_NAME}</h1>
           <p>{initialLoadingMessage}</p>
@@ -1037,6 +1499,7 @@ export default function App() {
         <div className="menu-container">
           <div className="menu-title-box">
             <span className="eyebrow">Gerenciador e Escalação</span>
+            <TeamLogo className="menu-team-logo" />
             <h1>{TEAM_NAME}</h1>
             <p>
               Cadastre jogadores, monte escalação e organize o banco de
@@ -1067,16 +1530,6 @@ export default function App() {
               <p>Alterar escalação, titulares e banco de reservas.</p>
             </button>
           </div>
-
-          <div className="menu-actions">
-            <Button
-              className="btn-blue"
-              onClick={saveOnline}
-              disabled={saveButtonDisabled}
-            >
-              <Save size={16} /> Salvar
-            </Button>
-          </div>
         </div>
       </div>
     );
@@ -1092,7 +1545,10 @@ export default function App() {
                 <Home size={15} /> Menu Principal
               </button>
 
-              <h1>Cadastro de Jogadores</h1>
+              <div className="title-with-logo">
+                <TeamLogo className="page-team-logo" />
+                <h1>Cadastro de Jogadores</h1>
+              </div>
               {isLoading && (
                 <p className="muted-text">Sincronizando dados...</p>
               )}
@@ -1180,7 +1636,10 @@ export default function App() {
                 <Home size={15} /> Menu Principal
               </button>
 
-              <h1>Agenda</h1>
+              <div className="title-with-logo">
+                <TeamLogo className="page-team-logo" />
+                <h1>Agenda</h1>
+              </div>
 
               {eventsLoading && (
                 <p className="muted-text">Sincronizando agenda...</p>
@@ -1218,7 +1677,7 @@ export default function App() {
                     onChange={(event) =>
                       updateEventForm({ title: event.target.value })
                     }
-                    placeholder="Ex: Treino de sábado"
+                    placeholder="Ex: Treino De Sábado"
                   />
                 </div>
 
@@ -1291,7 +1750,7 @@ export default function App() {
                     onChange={(event) =>
                       updateEventForm({ description: event.target.value })
                     }
-                    placeholder="Ex: Levar uniforme vermelho"
+                    placeholder="Ex: Entrar Com 10 Minutos de Antecedência"
                   />
                 </div>
               </div>
@@ -1402,7 +1861,11 @@ export default function App() {
                 <Home size={15} /> Menu Principal
               </button>
 
-              <h1>{TEAM_NAME}</h1>
+              <div className="title-with-logo">
+                <TeamLogo className="page-team-logo" />
+                <h1>{TEAM_NAME}</h1>
+              </div>
+
               {isLoading && (
                 <p className="muted-text">Sincronizando dados...</p>
               )}
@@ -1442,7 +1905,7 @@ export default function App() {
           <section className="bench-box">
             <div className="bench-head">
               <h2>Banco de Reservas</h2>
-              <span>{benchPlayers.length} reservas</span>
+              <span>{benchPlayers.length} Reservas</span>
             </div>
 
             <div className="bench-list">

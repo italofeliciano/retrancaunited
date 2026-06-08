@@ -1143,4 +1143,336 @@ select {
       transform: rotate(360deg);
     }
   }
+  .team-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    border-radius: 999px;
+    background: radial-gradient(
+        circle at top left,
+        rgba(248, 113, 113, 0.22),
+        transparent 35%
+      ),
+      rgba(3, 3, 3, 0.72);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45),
+      0 0 28px rgba(220, 38, 38, 0.18);
+  }
   
+  .team-logo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+  }
+  
+  .menu-team-logo {
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 18px;
+  }
+  
+  .page-team-logo {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+  }
+  
+  .loading-team-logo {
+    width: 118px;
+    height: 118px;
+    margin: 0 auto 20px;
+  }
+  
+  .title-with-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  
+  .title-with-logo h1 {
+    margin: 0;
+  }
+  
+  @media (max-width: 640px) {
+    .menu-team-logo {
+      width: 108px;
+      height: 108px;
+    }
+  
+    .page-team-logo {
+      width: 48px;
+      height: 48px;
+    }
+  
+    .title-with-logo {
+      align-items: flex-start;
+    }
+  }
+  .menu-container {
+    width: min(1180px, 100%);
+  }
+  
+  .menu-title-box {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    align-items: center;
+    column-gap: 24px;
+    max-width: 980px;
+    margin: 0 auto 34px;
+    text-align: left;
+  }
+  
+  .menu-team-logo {
+    grid-row: 1 / 4;
+    width: 140px;
+    height: 140px;
+    margin: 0;
+  }
+  
+  .menu-title-box .eyebrow {
+    margin-top: 4px;
+  }
+  
+  .menu-title-box h1 {
+    margin: 6px 0 10px;
+    font-size: clamp(46px, 5.6vw, 78px);
+  }
+  
+  .menu-title-box p {
+    max-width: 680px;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.45;
+  }
+  
+  .menu-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1100px;
+  }
+  
+  .menu-card {
+    min-height: 230px;
+  }
+  
+  @media (max-width: 1050px) {
+    .menu-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 760px;
+    }
+  }
+  
+  @media (max-width: 760px) {
+    .menu-title-box {
+      display: block;
+      max-width: 100%;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+  
+    .menu-team-logo {
+      width: 112px;
+      height: 112px;
+      margin: 0 auto 14px;
+    }
+  
+    .menu-title-box h1 {
+      font-size: clamp(38px, 12vw, 56px);
+    }
+  
+    .menu-title-box p {
+      max-width: 100%;
+      font-size: 16px;
+    }
+  
+    .menu-grid {
+      grid-template-columns: 1fr;
+      max-width: 460px;
+    }
+  
+    .menu-card {
+      min-height: 180px;
+    }
+  }
+  
+.page-wrap {
+  padding-top: 34px;
+}
+
+.lineup-layout {
+  padding-top: 26px;
+}
+
+@media (max-width: 640px) {
+  .page-wrap {
+    padding-top: 22px;
+  }
+
+  .lineup-layout {
+    padding-top: 18px;
+  }
+}
+.page-wrap {
+  padding-top: 26px;
+}
+
+/* Cadastro e Agenda: organiza botão Menu, logo/título e botões da direita */
+.page-header:not(.compact) {
+  align-items: flex-start;
+  margin-bottom: 26px;
+}
+
+.page-header:not(.compact) > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.page-header:not(.compact) .back-link {
+  margin-bottom: 12px;
+}
+
+.page-header:not(.compact) .title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.page-header:not(.compact) .page-team-logo {
+  width: 66px;
+  height: 66px;
+}
+
+.page-header:not(.compact) h1 {
+  margin: 0;
+  font-size: clamp(46px, 5vw, 72px);
+  line-height: 0.95;
+}
+
+.page-header:not(.compact) .header-actions {
+  align-self: flex-start;
+  margin-top: 34px;
+}
+
+/* Escalação: ajuste separado porque o cabeçalho fica dentro do card */
+.page-header.compact {
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.page-header.compact > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.page-header.compact .back-link {
+  margin-bottom: 12px;
+}
+
+.page-header.compact .title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.page-header.compact .page-team-logo {
+  width: 58px;
+  height: 58px;
+}
+
+.page-header.compact h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 0.95;
+}
+
+.page-header.compact .header-actions {
+  align-self: flex-start;
+  margin-top: 42px;
+}
+
+/* Evita que o logo fique espremido */
+.team-logo-wrap img {
+  padding: 7px;
+}
+
+@media (max-width: 760px) {
+  .page-wrap {
+    padding-top: 18px;
+  }
+
+  .page-header:not(.compact),
+  .page-header.compact {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-header:not(.compact) .header-actions,
+  .page-header.compact .header-actions {
+    align-self: stretch;
+    margin-top: 0;
+    justify-content: flex-start;
+  }
+
+  .page-header:not(.compact) .page-team-logo,
+  .page-header.compact .page-team-logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .page-header:not(.compact) h1,
+  .page-header.compact h1 {
+    font-size: clamp(34px, 11vw, 48px);
+  }
+}
+.menu-title-box h1,
+.menu-title-box p,
+.menu-card h2,
+.menu-card p,
+.page-header h1,
+.side-card h3,
+.bench-head h2,
+.selected-view-card h3,
+.agenda-head h2,
+.event-main h3,
+.event-opponent,
+.event-description,
+.empty-agenda,
+.muted-text,
+.hint-text,
+.player-row-info strong,
+.player-row-info span,
+.bench-card strong,
+.bench-card span,
+.selected-view-head strong,
+.selected-view-head span,
+.field-name-tag span,
+.field-name-tag strong,
+.form-group label,
+.btn,
+.back-link,
+.eyebrow,
+.event-type-badge,
+.event-status {
+  text-transform: capitalize;
+}
+
+.rating-badge {
+  text-transform: uppercase;
+}
+
+input,
+textarea,
+select,
+option {
+  text-transform: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  text-transform: none;
+}
