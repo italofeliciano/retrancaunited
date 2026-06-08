@@ -591,6 +591,11 @@ const createInitialSquad = () =>
     photo: '',
     shirtNumber: String(index + 1),
     isCaptain: false,
+    preferredPosition:
+    index < 11
+        ? formations['4-3-3'][index].role
+        : ['GOL', 'ZAG', 'LAT', 'VOL', 'MEI', 'ATA', 'ATA'][index - 11],
+    secondaryPosition: '',
   }));
 
 const starterSquad = createInitialSquad();
@@ -829,6 +834,32 @@ function PlayerForm({ player, onChange, onPhoto, title }) {
             placeholder="Ex: 10"
           />
         </div>
+
+        <div className="form-group">
+          <label>Posição Principal</label>
+          <input
+            value={player.preferredPosition || ''}
+            onChange={(event) =>
+              onChange({
+                preferredPosition: event.target.value.toUpperCase().slice(0, 4),
+              })
+            }
+            placeholder="Ex: ZAG"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Posição Secundária</label>
+          <input
+            value={player.secondaryPosition || ''}
+            onChange={(event) =>
+              onChange({
+                secondaryPosition: event.target.value.toUpperCase().slice(0, 4),
+              })
+            }
+            placeholder="Ex: VOL"
+          />
+        </div>
       </div>
 
       <input
@@ -947,6 +978,8 @@ export default function App() {
       photo: '',
       shirtNumber: '',
       isCaptain: false,
+      preferredPosition: 'ATA',
+      secondaryPosition: '',
     };
 
     setSquad((previousSquad) => [...previousSquad, newPlayer]);
@@ -1006,6 +1039,7 @@ export default function App() {
 
     setIsLoading(true);
 
+ 
     const playersToSave = squad.map((player) => ({
       id: player.id,
       name: player.name || 'Sem nome',
@@ -1014,16 +1048,22 @@ export default function App() {
       photo: player.photo || null,
       shirt_number: player.shirtNumber || null,
       is_captain: Boolean(player.isCaptain),
+      preferred_position: player.preferredPosition || player.role || null,
+      secondary_position: player.secondaryPosition || null,
     }));
 
-    const { error: playersError } = await supabase
-      .from('players')
-      .upsert(playersToSave, { onConflict: 'id' });
-
-    if (playersError) {
-      setIsLoading(false);
-      alert('Erro ao salvar jogadores: ' + playersError.message);
-      return;
+    for (let index = 0; index < playersToSave.length; index += 5) {
+      const playersChunk = playersToSave.slice(index, index + 5);
+    
+      const { error: playersError } = await supabase
+        .from('players')
+        .upsert(playersChunk, { onConflict: 'id' });
+    
+      if (playersError) {
+        setIsLoading(false);
+        alert('Erro ao salvar jogadores: ' + playersError.message);
+        return;
+      }
     }
 
     const { error: stateError } = await supabase.from('team_state').upsert(
@@ -1092,15 +1132,18 @@ export default function App() {
     }
 
     if (playersData && playersData.length > 0) {
-      const loadedPlayers = playersData.map((player) => ({
-        id: player.id,
-        name: player.name,
-        role: player.role,
-        rating: player.rating,
-        photo: player.photo || '',
-        shirtNumber: player.shirt_number || '',
-        isCaptain: Boolean(player.is_captain),
-      }));
+      
+    const loadedPlayers = playersData.map((player) => ({
+      id: player.id,
+      name: player.name,
+      role: player.role,
+      rating: player.rating,
+      photo: player.photo || '',
+      shirtNumber: player.shirt_number || '',
+      isCaptain: Boolean(player.is_captain),
+      preferredPosition: player.preferred_position || player.role || '',
+      secondaryPosition: player.secondary_position || '',
+    }));
 
       setSquad(loadedPlayers);
 
@@ -1645,7 +1688,12 @@ export default function App() {
                       <strong>{player.name}</strong>
                       <span>
                         {player.isCaptain ? 'C • ' : ''}
+                        {player.shirtNumber ? `#${player.shirtNumber} • ` : ''}
                         {player.role} • OVR {player.rating}
+                      </span>
+                      <span className="preferred-position-line">
+                        Principal: {player.preferredPosition || player.role || '--'}
+                        {player.secondaryPosition ? ` • Secundária: ${player.secondaryPosition}` : ''}
                       </span>
                     </div>
 
@@ -1988,6 +2036,12 @@ export default function App() {
                     {player?.shirtNumber ? `#${player.shirtNumber}` : `R${index + 1}`} • {player?.role}
                   </strong>
                   <span>{player?.name}</span>
+                  {(player?.preferredPosition || player?.secondaryPosition) && (
+                    <span className="bench-position-line">
+                      {player?.preferredPosition || player?.role || '--'}
+                      {player?.secondaryPosition ? ` / ${player.secondaryPosition}` : ''}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -2008,6 +2062,12 @@ export default function App() {
                 {selectedPlayer?.shirtNumber ? `#${selectedPlayer.shirtNumber} • ` : ''}
                 {selectedPlayer?.role || '--'} • OVR{' '}
                 {selectedPlayer?.rating || '--'}
+                </span>
+                <span>
+                  Principal: {selectedPlayer?.preferredPosition || selectedPlayer?.role || '--'}
+                  {selectedPlayer?.secondaryPosition
+                    ? ` • Secundária: ${selectedPlayer.secondaryPosition}`
+                    : ''}
                 </span>
               </div>
             </div>
