@@ -20,6 +20,8 @@ import './App.css';
 
 const TEAM_NAME = 'Retranca United';
 
+const VAPID_PUBLIC_KEY = 'BGwx5J-AxNT6yFdGTlHJcnJs0gPzPEE9B-c7lgDIAps5oh_Ndkuny3JeFNq4_LfdLYDhnqudB04Ywb9A-6dy4Gg';
+
 const formations = {
   '4-3-3': [
     { role: 'GOL', x: 50, y: 91 },
@@ -213,6 +215,22 @@ function getEventStatusClass(status) {
   return status || 'marcado';
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
 function Button({ children, className = '', ...props }) {
   return (
     <button className={`btn ${className}`} {...props}>
@@ -372,6 +390,8 @@ export default function App() {
   const [initialLoadingMessage, setInitialLoadingMessage] = useState(
     'Carregando informações...'
   );
+  const [notificationStatus, setNotificationStatus] = useState('not-supported');
+  const [notificationLoading, setNotificationLoading] = useState(false);
 
   const selectedPlayer = squad.find((player) => player.id === selectedId);
   const lineupPlayers = lineupIds.map((id) =>
@@ -395,6 +415,7 @@ export default function App() {
 
       setInitialLoadingMessage('Carregando agenda...');
       await loadEvents({ silent: true });
+      checkNotificationSupport();
 
       setInitialLoadingMessage('Tudo pronto!');
     } catch (error) {
@@ -656,6 +677,88 @@ export default function App() {
     }));
 
     setEvents(sortEventsByDate(loadedEvents));
+  }
+
+  function checkNotificationSupport() {
+    if (
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window) ||
+      !('Notification' in window)
+    ) {
+      setNotificationStatus('not-supported');
+      return;
+    }
+  
+    if (Notification.permission === 'granted') {
+      setNotificationStatus('granted');
+      return;
+    }
+  
+    if (Notification.permission === 'denied') {
+      setNotificationStatus('denied');
+      return;
+    }
+  
+    setNotificationStatus('default');
+  }
+  
+  async function enableNotifications() {
+    if (
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window) ||
+      !('Notification' in window)
+    ) {
+      alert('Este dispositivo/navegador não suporta notificações push.');
+      setNotificationStatus('not-supported');
+      return;
+    }
+  
+    setNotificationLoading(true);
+  
+    try {
+      const permission = await Notification.requestPermission();
+  
+      if (permission !== 'granted') {
+        setNotificationStatus(permission === 'denied' ? 'denied' : 'default');
+        alert('Permissão de notificação não foi concedida.');
+        return;
+      }
+  
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+  
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+  
+      const subscriptionJson = subscription.toJSON();
+  
+      const { error } = await supabase.from('notification_subscriptions').upsert(
+        {
+          endpoint: subscription.endpoint,
+          subscription: subscriptionJson,
+          user_agent: navigator.userAgent,
+          active: true,
+        },
+        { onConflict: 'endpoint' }
+      );
+  
+      if (error) {
+        alert('Erro ao salvar dispositivo: ' + error.message);
+        return;
+      }
+  
+      setNotificationStatus('granted');
+      alert('Notificações ativadas neste dispositivo!');
+    } catch (error) {
+      console.error('Erro ao ativar notificações:', error);
+      alert('Erro ao ativar notificações: ' + error.message);
+    } finally {
+      setNotificationLoading(false);
+    }
   }
 
   function updateEventForm(patch) {
@@ -1087,6 +1190,18 @@ export default function App() {
             <div className="header-actions">
               <Button className="btn-blue" onClick={loadEvents}>
                 <CalendarDays size={16} /> Atualizar agenda
+              </Button>
+
+              <Button
+                className="btn-red-outline"
+                onClick={enableNotifications}
+                disabled={notificationLoading || notificationStatus === 'granted'}
+              >
+                {notificationStatus === 'granted'
+                  ? 'Notificações ativas'
+                  : notificationLoading
+                    ? 'Ativando...'
+                    : 'Ativar notificações'}
               </Button>
             </div>
           </header>
