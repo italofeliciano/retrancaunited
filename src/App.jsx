@@ -926,38 +926,30 @@ export default function App() {
     squad.find((player) => player.id === id));
   const benchPlayers = benchIds.map((id) =>
     squad.find((player) => player.id === id));
-  const [session, setSession] = useState(null);
-  const [authUser, setAuthUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [dataLoadedForUser, setDataLoadedForUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [loginUsername, setLoginUsername] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [loginChecked, setLoginChecked] = useState(false);
+    const [dataLoadedForUser, setDataLoadedForUser] = useState(null);
 
-  useEffect(() => {
-    initializeAuth();
-  
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, nextSession) => {
-        setSession(nextSession);
-        setAuthUser(nextSession?.user || null);
-  
-        if (nextSession?.user) {
-          await loadUserProfile(nextSession.user.id);
-        } else {
-          setUserProfile(null);
-          setDataLoadedForUser(null);
+    useEffect(() => {
+      const savedUser = localStorage.getItem('retranca_current_user');
+    
+      if (savedUser) {
+        try {
+          setCurrentUser(JSON.parse(savedUser));
+        } catch {
+          localStorage.removeItem('retranca_current_user');
+          setCurrentUser(null);
           setIsInitialLoading(false);
         }
+      } else {
+        setIsInitialLoading(false);
       }
-    );
-  
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    
+      setLoginChecked(true);
+    }, []);
 
   function updatePlayer(id, patch) {
     setSquad((previousSquad) =>
@@ -1223,106 +1215,94 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!session?.user?.id) {
+    if (!currentUser?.id) {
       return;
     }
   
-    if (dataLoadedForUser === session.user.id) {
+    if (dataLoadedForUser === currentUser.id) {
       return;
     }
   
     loadInitialData().then(() => {
-      setDataLoadedForUser(session.user.id);
+      setDataLoadedForUser(currentUser.id);
     });
   
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, dataLoadedForUser]);
-
-  async function initializeAuth() {
-    setAuthLoading(true);
+  }, [currentUser?.id, dataLoadedForUser]);
   
-    const { data, error } = await supabase.auth.getSession();
-  
-    if (error) {
-      console.error('Erro ao carregar sessão:', error);
-      setAuthLoading(false);
-      setIsInitialLoading(false);
-      return;
-    }
-  
-    setSession(data.session);
-    setAuthUser(data.session?.user || null);
-  
-    if (data.session?.user) {
-      await loadUserProfile(data.session.user.id);
-    } else {
-      setIsInitialLoading(false);
-    }
-  
-    setAuthLoading(false);
+  function normalizeUsername(value) {
+    return String(value || '').trim().toLowerCase();
   }
   
-  async function signOut() {
-    const confirmExit = window.confirm('Deseja sair da conta?');
+  async function signInSimple() {
+    const username = normalizeUsername(loginUsername);
+    const password = String(loginPassword || '').trim();
   
-    if (!confirmExit) return;
-  
-    await supabase.auth.signOut();
-  
-    setSession(null);
-    setAuthUser(null);
-    setUserProfile(null);
-    setScreen('menu');
-  }
-
-  async function loadUserProfile(userId) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-  
-    if (error) {
-      console.error('Erro ao carregar perfil:', error);
-      setUserProfile(null);
-      return;
-    }
-  
-    setUserProfile(data);
-  }
-  
-  async function signIn() {
-    if (!loginEmail.trim() || !loginPassword.trim()) {
-      alert('Digite Email E Senha.');
+    if (!username || !password) {
+      alert('Digite Usuário E Senha.');
       return;
     }
   
     setLoginLoading(true);
   
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail.trim(),
-      password: loginPassword,
-    });
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .ilike('username', username)
+      .maybeSingle();
   
     setLoginLoading(false);
   
     if (error) {
-      alert('Erro ao entrar: ' + error.message);
+      alert('Erro ao buscar usuário: ' + error.message);
       return;
     }
   
-    setSession(data.session);
-    setAuthUser(data.user);
-  
-    if (data.user) {
-      await loadUserProfile(data.user.id);
+    if (!data) {
+      alert(`Usuário Não Encontrado: ${username}`);
+      return;
     }
-  }
-    
-  function isAdmin() {
-    const role = String(userProfile?.role || '').trim().toLowerCase();
   
-    return role === 'admin' || role === 'administrador';
+    if (!data.active) {
+      alert('Usuário Encontrado, Mas Está Inativo.');
+      return;
+    }
+  
+    if (String(data.password_text || '').trim() !== password) {
+      alert(
+        `Senha Não Bate. Banco: "${data.password_text}" | Digitada: "${password}"`
+      );
+      return;
+    }
+  
+    const userToStore = {
+      id: data.id,
+      username: data.username,
+      name: data.name,
+      is_admin: Boolean(data.is_admin),
+      player_id: data.player_id || null,
+    };
+  
+    localStorage.setItem('retranca_current_user', JSON.stringify(userToStore));
+  
+    setCurrentUser(userToStore);
+    setLoginPassword('');
+  }
+
+  function signOutSimple() {
+    const confirmExit = window.confirm('Deseja sair da conta?');
+  
+    if (!confirmExit) return;
+  
+    localStorage.removeItem('retranca_current_user');
+    setCurrentUser(null);
+    setDataLoadedForUser(null);
+    setIsInitialLoading(false);
+    setScreen('menu');
+  }
+  
+  function isAdmin() {
+    return Boolean(currentUser?.is_admin);
   }
   
   async function loadEvents(options = {}) {
@@ -1735,7 +1715,7 @@ export default function App() {
 
   const saveButtonDisabled = isLoading || !hasLoadedOnline || Boolean(loadError);
 
-  if (authLoading) {
+  if (!loginChecked) {
     return (
       <div className="app-screen loading-screen">
         <div className="loading-card">
@@ -1747,7 +1727,7 @@ export default function App() {
     );
   }
   
-  if (!session) {
+  if (!currentUser) {
     return (
       <div className="app-screen login-screen">
         <div className="login-card">
@@ -1755,16 +1735,16 @@ export default function App() {
   
           <span className="eyebrow">Área Do Time</span>
           <h1>{TEAM_NAME}</h1>
-          <p>Entre Com Seu Email E Senha Para Acessar O Aplicativo.</p>
+          <p>Entre Com Seu Usuário E Senha Para Acessar O Aplicativo.</p>
   
           <div className="login-form">
             <div className="form-group full">
-              <label>Email</label>
+              <label>Usuário</label>
               <input
-                value={loginEmail}
-                onChange={(event) => setLoginEmail(event.target.value)}
-                placeholder="seuemail@exemplo.com"
-                type="email"
+                value={loginUsername}
+                onChange={(event) => setLoginUsername(event.target.value)}
+                placeholder="nome.sobrenome"
+                type="text"
               />
             </div>
   
@@ -1777,7 +1757,7 @@ export default function App() {
                 type="password"
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
-                    signIn();
+                    signInSimple();
                   }
                 }}
               />
@@ -1785,7 +1765,7 @@ export default function App() {
   
             <Button
               className="btn-blue full-button"
-              onClick={signIn}
+              onClick={signInSimple}
               disabled={loginLoading}
             >
               <LogIn size={16} />
@@ -1793,13 +1773,11 @@ export default function App() {
             </Button>
           </div>
   
-          <p className="hint-text">
-            O Cadastro De Usuários Será Liberado Apenas Para Administrador.
-          </p>
+          <p className="hint-text">Usuário No Formato Nome.Sobrenome.</p>
         </div>
       </div>
     );
-  }
+  }    
 
   if (isInitialLoading) {
     return (
@@ -1827,10 +1805,10 @@ export default function App() {
             Cadastre Jogadores, Monte Escalação E Organize O Banco De Reservas.
           </p>
 
-          {userProfile && (
+          {currentUser && (
             <p className="logged-user-line">
               <User size={14} />
-              Logado Como {userProfile.name} • {isAdmin() ? 'Administrador' : 'Jogador'}
+              Logado Como {currentUser.name} • {isAdmin() ? 'Administrador' : 'Jogador'}
             </p>
           )}
         </div>
@@ -1861,9 +1839,9 @@ export default function App() {
             </button>
           </div>
           <div className="menu-actions">
-            <Button className="btn-dark" onClick={signOut}>
-              <LogOut size={16} /> Sair
-            </Button>
+          <Button className="btn-dark" onClick={signOutSimple}>
+          <LogOut size={16} /> Sair
+          </Button>
           </div>
         </div>
       </div>
