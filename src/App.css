@@ -1529,3 +1529,13 @@ textarea::placeholder {
   color: #fca5a5;
   font-size: 13px;
 }
+
+.icon-action.success {
+  color: #bbf7d0;
+}
+
+.icon-action.success:hover {
+  background: rgba(22, 163, 74, 0.45);
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #bbf7d0;
+}

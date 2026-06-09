@@ -14,6 +14,7 @@ import {
   CalendarDays,
   Clock,
   Pencil,
+  CheckCircle,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './App.css';
@@ -1409,6 +1410,38 @@ export default function App() {
     await loadEvents();
   }
 
+  async function completeEvent(id) {
+    const confirmComplete = window.confirm(
+      'Deseja marcar este evento como concluído?'
+    );
+  
+    if (!confirmComplete) {
+      return;
+    }
+  
+    setEventsLoading(true);
+  
+    const { error } = await supabase
+      .from('events')
+      .update({ status: 'concluido' })
+      .eq('id', id);
+  
+    setEventsLoading(false);
+  
+    if (error) {
+      alert('Erro ao concluir evento: ' + error.message);
+      return;
+    }
+  
+    if (editingEventId === id) {
+      cancelEventEdit();
+    }
+  
+    await loadEvents();
+  
+    alert('Evento concluído!');
+  }
+
   function exportLineupImage() {
     const element = document.querySelector('[data-export-lineup]');
 
@@ -1927,6 +1960,16 @@ export default function App() {
                       </span>
 
                       <div className="event-actions">
+                        {event.status !== 'concluido' && (
+                          <button
+                            className="icon-action success"
+                            onClick={() => completeEvent(event.id)}
+                            title="Concluir evento"
+                          >
+                            <CheckCircle size={17} />
+                          </button>
+                        )}
+
                         <button
                           className="icon-action"
                           onClick={() => startEditEvent(event)}
