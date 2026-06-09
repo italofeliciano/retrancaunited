@@ -1939,82 +1939,351 @@ async function loadInitialData() {
     alert('Evento concluído!');
   }
 
-  function exportLineupImage() {
-    const element = document.querySelector('[data-export-lineup]');
-
-    if (!element) {
-      alert('Área da escalação não encontrada.');
+  async function exportLineupImage() {
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+  
+    const width = 1200;
+    const height = 1700;
+  
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+  
+    const ctx = canvas.getContext('2d');
+  
+    if (!ctx) {
+      alert('Não foi possível gerar a imagem.');
       return;
     }
-
-    const rect = element.getBoundingClientRect();
-    const clone = element.cloneNode(true);
-
-    clone.style.width = `${Math.ceil(rect.width)}px`;
-    clone.style.minHeight = `${Math.ceil(rect.height)}px`;
-    clone.style.background = '#030303';
-    clone.style.borderRadius = '28px';
-    clone.style.boxSizing = 'border-box';
-    clone.style.margin = '0';
-
-    const cssText = Array.from(document.styleSheets)
-      .map((sheet) => {
-        try {
-          return Array.from(sheet.cssRules)
-            .map((rule) => rule.cssText)
-            .join('\n');
-        } catch {
-          return '';
-        }
-      })
-      .join('\n');
-
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(
-        rect.width
-      )}" height="${Math.ceil(rect.height)}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">
-            <style>
-              ${cssText}
-
-              body {
-                margin: 0;
-                background: #030303;
-              }
-
-              .lineup-card {
-                width: ${Math.ceil(rect.width)}px !important;
-                min-height: ${Math.ceil(rect.height)}px !important;
-                margin: 0 !important;
-                background: #030303 !important;
-                box-sizing: border-box !important;
-              }
-
-              .bench-list {
-                display: flex !important;
-                overflow: visible !important;
-                flex-wrap: wrap !important;
-              }
-            </style>
-            ${clone.outerHTML}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
-
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = 'retranca-united-escalacao-com-reservas.svg';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  
+    ctx.scale(scale, scale);
+  
+    function roundedRect(x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+  
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+  
+    function drawText(text, x, y, options = {}) {
+      const {
+        size = 28,
+        color = '#ffffff',
+        weight = '800',
+        align = 'left',
+        maxWidth = undefined,
+      } = options;
+  
+      ctx.fillStyle = color;
+      ctx.font = `${weight} ${size}px Arial, sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(text || ''), x, y, maxWidth);
+    }
+  
+    function drawSmallText(text, x, y, color = '#d1d5db') {
+      drawText(text, x, y, {
+        size: 20,
+        color,
+        weight: '700',
+      });
+    }
+  
+    function getPlayerInitials(name) {
+      const parts = String(name || 'J')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+  
+      if (parts.length === 0) return 'J';
+  
+      if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+      }
+  
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+  
+    function drawPlayerBadge(player, slot, fieldX, fieldY, fieldW, fieldH) {
+      const x = fieldX + (slot.x / 100) * fieldW;
+      const y = fieldY + (slot.y / 100) * fieldH;
+  
+      const radius = 42;
+  
+      ctx.save();
+  
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 8;
+  
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+  
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+  
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#fecaca';
+      ctx.stroke();
+  
+      ctx.beginPath();
+      ctx.arc(x + 32, y - 32, 18, 0, Math.PI * 2);
+      ctx.fillStyle = '#111827';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fca5a5';
+      ctx.stroke();
+  
+      drawText(player?.rating || '--', x + 32, y - 31, {
+        size: 14,
+        color: '#ffffff',
+        weight: '950',
+        align: 'center',
+      });
+  
+      if (player?.shirtNumber) {
+        ctx.beginPath();
+        ctx.arc(x - 32, y - 32, 16, 0, Math.PI * 2);
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fecaca';
+        ctx.stroke();
+  
+        drawText(`#${player.shirtNumber}`, x - 32, y - 31, {
+          size: 11,
+          color: '#ffffff',
+          weight: '950',
+          align: 'center',
+        });
+      }
+  
+      if (player?.isCaptain) {
+        ctx.beginPath();
+        ctx.arc(x, y + 38, 15, 0, Math.PI * 2);
+        ctx.fillStyle = '#facc15';
+        ctx.fill();
+  
+        drawText('C', x, y + 38, {
+          size: 15,
+          color: '#111827',
+          weight: '950',
+          align: 'center',
+        });
+      }
+  
+      drawText(getPlayerInitials(player?.name), x, y - 2, {
+        size: 25,
+        color: '#ffffff',
+        weight: '950',
+        align: 'center',
+      });
+  
+      roundedRect(x - 88, y + 54, 176, 42, 16);
+      ctx.fillStyle = 'rgba(3, 7, 18, 0.84)';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.45)';
+      ctx.stroke();
+  
+      drawText(player?.name || 'Vazio', x, y + 68, {
+        size: 16,
+        color: '#ffffff',
+        weight: '850',
+        align: 'center',
+        maxWidth: 160,
+      });
+  
+      drawText(slot.role || player?.role || '--', x, y + 90, {
+        size: 14,
+        color: '#fca5a5',
+        weight: '950',
+        align: 'center',
+      });
+  
+      ctx.restore();
+    }
+  
+    function drawField(fieldX, fieldY, fieldW, fieldH) {
+      roundedRect(fieldX, fieldY, fieldW, fieldH, 34);
+      ctx.fillStyle = '#0f7a38';
+      ctx.fill();
+  
+      for (let i = 0; i < 8; i += 1) {
+        ctx.fillStyle =
+          i % 2 === 0 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
+        ctx.fillRect(fieldX, fieldY + (fieldH / 8) * i, fieldW, fieldH / 8);
+      }
+  
+      roundedRect(fieldX + 16, fieldY + 16, fieldW - 32, fieldH - 32, 24);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.78)';
+      ctx.stroke();
+  
+      ctx.beginPath();
+      ctx.moveTo(fieldX + 16, fieldY + fieldH / 2);
+      ctx.lineTo(fieldX + fieldW - 16, fieldY + fieldH / 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+  
+      ctx.beginPath();
+      ctx.arc(fieldX + fieldW / 2, fieldY + fieldH / 2, 105, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+  
+      ctx.beginPath();
+      ctx.arc(fieldX + fieldW / 2, fieldY + fieldH / 2, 7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fill();
+  
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 4;
+  
+      ctx.strokeRect(fieldX + fieldW * 0.25, fieldY + 16, fieldW * 0.5, 150);
+      ctx.strokeRect(fieldX + fieldW * 0.36, fieldY + 16, fieldW * 0.28, 75);
+  
+      ctx.strokeRect(
+        fieldX + fieldW * 0.25,
+        fieldY + fieldH - 166,
+        fieldW * 0.5,
+        150
+      );
+      ctx.strokeRect(
+        fieldX + fieldW * 0.36,
+        fieldY + fieldH - 91,
+        fieldW * 0.28,
+        75
+      );
+    }
+  
+    function drawBench(benchX, benchY) {
+      drawText('Banco De Reservas', benchX, benchY, {
+        size: 32,
+        color: '#ffffff',
+        weight: '950',
+      });
+  
+      drawSmallText(`${benchPlayers.length} reservas`, benchX + 300, benchY, '#fca5a5');
+  
+      const cardW = 250;
+      const cardH = 78;
+      const gap = 18;
+  
+      benchPlayers.forEach((player, index) => {
+        const col = index % 4;
+        const row = Math.floor(index / 4);
+  
+        const x = benchX + col * (cardW + gap);
+        const y = benchY + 45 + row * (cardH + gap);
+  
+        roundedRect(x, y, cardW, cardH, 18);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.28)';
+        ctx.stroke();
+  
+        ctx.beginPath();
+        ctx.arc(x + 36, y + 39, 24, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+  
+        drawText(getPlayerInitials(player?.name), x + 36, y + 39, {
+          size: 15,
+          color: '#ffffff',
+          weight: '950',
+          align: 'center',
+        });
+  
+        drawText(player?.name || 'Reserva', x + 72, y + 29, {
+          size: 17,
+          color: '#ffffff',
+          weight: '900',
+          maxWidth: 160,
+        });
+  
+        drawSmallText(
+          `${player?.shirtNumber ? `#${player.shirtNumber} • ` : ''}${
+            player?.role || '--'
+          } • OVR ${player?.rating || '--'}`,
+          x + 72,
+          y + 54,
+          '#fecaca'
+        );
+      });
+    }
+  
+    const background = ctx.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, '#09090b');
+    background.addColorStop(0.45, '#1f0707');
+    background.addColorStop(1, '#020617');
+  
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+  
+    drawText(TEAM_NAME, 70, 82, {
+      size: 58,
+      color: '#ffffff',
+      weight: '950',
+    });
+  
+    drawText(`Formação ${formation}`, 72, 135, {
+      size: 26,
+      color: '#fca5a5',
+      weight: '900',
+    });
+  
+    drawText(new Date().toLocaleDateString('pt-BR'), width - 70, 90, {
+      size: 24,
+      color: '#e5e7eb',
+      weight: '800',
+      align: 'right',
+    });
+  
+    const fieldX = 70;
+    const fieldY = 180;
+    const fieldW = 1060;
+    const fieldH = 1050;
+  
+    drawField(fieldX, fieldY, fieldW, fieldH);
+  
+    positions.forEach((slot, index) => {
+      drawPlayerBadge(lineupPlayers[index], slot, fieldX, fieldY, fieldW, fieldH);
+    });
+  
+    drawBench(70, 1295);
+  
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert('Não foi possível gerar o PNG.');
+        return;
+      }
+  
+      const pngUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+  
+      link.href = pngUrl;
+      link.download = 'retranca-united-escalacao.png';
+  
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  
+      setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+    }, 'image/png');
   }
 
   function swapArrayItems(array, fromIndex, toIndex) {
@@ -2297,18 +2566,6 @@ async function loadInitialData() {
               {usersLoading && (
                 <p className="muted-text">Sincronizando usuários...</p>
               )}
-            </div>
-  
-            <div className="header-actions">
-            <Button
-              className="btn-blue"
-              onClick={async () => {
-                await loadEvents();
-                await loadEventAttendance();
-              }}
-            >
-              <CalendarDays size={16} /> Atualizar agenda
-            </Button>
             </div>
           </header>
   
@@ -3140,7 +3397,7 @@ async function loadInitialData() {
             </Button>
 
               <Button className="btn-red-outline" onClick={exportLineupImage}>
-                <Download size={16} /> Exportar escalação
+                <Download size={16} /> Exportar PNG
               </Button>
             </div>
           </div>
