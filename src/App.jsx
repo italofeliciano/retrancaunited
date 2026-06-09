@@ -18,6 +18,7 @@ import {
   LogIn,
   LogOut,
   User,
+  UserPlus,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './App.css';
@@ -920,19 +921,31 @@ export default function App() {
   );
   const [notificationStatus, setNotificationStatus] = useState('not-supported');
   const [notificationLoading, setNotificationLoading] = useState(false);
-
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginChecked, setLoginChecked] = useState(false);
+  const [dataLoadedForUser, setDataLoadedForUser] = useState(null);
+  const [accountPasswordForm, setAccountPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [appUsers, setAppUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    username: '',
+    isAdmin: false,
+    playerId: '',
+  });
   const selectedPlayer = squad.find((player) => player.id === selectedId);
   const lineupPlayers = lineupIds.map((id) =>
     squad.find((player) => player.id === id));
   const benchPlayers = benchIds.map((id) =>
     squad.find((player) => player.id === id));
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loginUsername, setLoginUsername] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
-    const [loginLoading, setLoginLoading] = useState(false);
-    const [loginChecked, setLoginChecked] = useState(false);
-    const [dataLoadedForUser, setDataLoadedForUser] = useState(null);
-
     useEffect(() => {
       const savedUser = localStorage.getItem('retranca_current_user');
     
@@ -1230,10 +1243,28 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id, dataLoadedForUser]);
   
+  useEffect(() => {
+    if (screen !== 'usuarios') {
+      return;
+    }
+  
+    if (!currentUser?.id) {
+      return;
+    }
+  
+    if (!isAdmin()) {
+      return;
+    }
+  
+    loadAppUsers();
+  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, currentUser?.id]);
+
   function normalizeUsername(value) {
     return String(value || '').trim().toLowerCase();
   }
-  
+
   async function signInSimple() {
     const username = normalizeUsername(loginUsername);
     const password = String(loginPassword || '').trim();
@@ -1287,6 +1318,220 @@ export default function App() {
   
     setCurrentUser(userToStore);
     setLoginPassword('');
+  }
+
+  function updateNewUserForm(patch) {
+    setNewUserForm((previousForm) => ({
+      ...previousForm,
+      ...patch,
+    }));
+  }
+
+  function updateAccountPasswordForm(patch) {
+    setAccountPasswordForm((previousForm) => ({
+      ...previousForm,
+      ...patch,
+    }));
+  }
+
+  async function loadAppUsers() {
+    if (!isAdmin()) {
+      return;
+    }
+  
+    setUsersLoading(true);
+  
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .order('created_at', { ascending: true });
+  
+    setUsersLoading(false);
+  
+    if (error) {
+      alert('Erro ao carregar usuários: ' + error.message);
+      return;
+    }
+  
+    setAppUsers(data || []);
+  }
+  
+  async function createAppUser() {
+    if (!isAdmin()) {
+      alert('Apenas administrador pode cadastrar usuários.');
+      return;
+    }
+  
+    const name = String(newUserForm.name || '').trim();
+    const username = normalizeUsername(newUserForm.username);
+    const password = '123';
+  
+    if (!name) {
+      alert('Digite o nome do usuário.');
+      return;
+    }
+  
+    if (!username) {
+      alert('Digite o usuário. Exemplo: nome.sobrenome');
+      return;
+    }
+  
+    setUsersLoading(true);
+  
+    const { error } = await supabase.from('app_users').insert({
+      name,
+      username,
+      password_text: password,
+      is_admin: Boolean(newUserForm.isAdmin),
+      player_id: newUserForm.playerId || null,
+      active: true,
+    });
+  
+    setUsersLoading(false);
+  
+    if (error) {
+      alert('Erro ao criar usuário: ' + error.message);
+      return;
+    }
+  
+    alert('Usuário criado com sucesso! Senha padrão: 123');
+  
+    setNewUserForm({
+      name: '',
+      username: '',
+      isAdmin: false,
+      playerId: '',
+    });
+  
+    await loadAppUsers();
+  }
+  
+  async function toggleAppUserActive(user) {
+    if (!isAdmin()) {
+      alert('Apenas administrador pode alterar usuários.');
+      return;
+    }
+  
+    if (user.id === currentUser?.id) {
+      alert('Você não pode desativar o próprio usuário logado.');
+      return;
+    }
+  
+    const { error } = await supabase
+      .from('app_users')
+      .update({ active: !user.active })
+      .eq('id', user.id);
+  
+    if (error) {
+      alert('Erro ao atualizar usuário: ' + error.message);
+      return;
+    }
+  
+    await loadAppUsers();
+  }
+  
+  async function toggleAppUserAdmin(user) {
+    if (!isAdmin()) {
+      alert('Apenas administrador pode alterar usuários.');
+      return;
+    }
+  
+    if (user.id === currentUser?.id) {
+      alert('Você não pode remover seu próprio administrador.');
+      return;
+    }
+  
+    const { error } = await supabase
+      .from('app_users')
+      .update({ is_admin: !user.is_admin })
+      .eq('id', user.id);
+  
+    if (error) {
+      alert('Erro ao atualizar permissão: ' + error.message);
+      return;
+    }
+  
+    await loadAppUsers();
+  }
+
+  async function changeMyPassword() {
+    if (!currentUser?.id) {
+      alert('Usuário não encontrado.');
+      return;
+    }
+  
+    const currentPassword = String(
+      accountPasswordForm.currentPassword || ''
+    ).trim();
+  
+    const newPassword = String(
+      accountPasswordForm.newPassword || ''
+    ).trim();
+  
+    const confirmPassword = String(
+      accountPasswordForm.confirmPassword || ''
+    ).trim();
+  
+    if (!currentPassword) {
+      alert('Digite sua senha atual.');
+      return;
+    }
+  
+    if (!newPassword) {
+      alert('Digite a nova senha.');
+      return;
+    }
+  
+    if (newPassword !== confirmPassword) {
+      alert('A nova senha e a confirmação não conferem.');
+      return;
+    }
+  
+    setAccountLoading(true);
+  
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('id, password_text')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+  
+    if (error) {
+      setAccountLoading(false);
+      alert('Erro ao verificar senha atual: ' + error.message);
+      return;
+    }
+  
+    if (!data) {
+      setAccountLoading(false);
+      alert('Usuário não encontrado no banco.');
+      return;
+    }
+  
+    if (String(data.password_text || '').trim() !== currentPassword) {
+      setAccountLoading(false);
+      alert('Senha atual incorreta.');
+      return;
+    }
+  
+    const { error: updateError } = await supabase
+      .from('app_users')
+      .update({ password_text: newPassword })
+      .eq('id', currentUser.id);
+  
+    setAccountLoading(false);
+  
+    if (updateError) {
+      alert('Erro ao alterar senha: ' + updateError.message);
+      return;
+    }
+  
+    setAccountPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+  
+    alert('Senha alterada com sucesso!');
   }
 
   function signOutSimple() {
@@ -1726,7 +1971,7 @@ export default function App() {
       </div>
     );
   }
-  
+
   if (!currentUser) {
     return (
       <div className="app-screen login-screen">
@@ -1773,11 +2018,14 @@ export default function App() {
             </Button>
           </div>
   
-          <p className="hint-text">Usuário No Formato Nome.Sobrenome.</p>
+          <p className="hint-text">
+            Usuário No Formato Nome.Sobrenome. Usuários novos entram com senha padrão: 123.
+          </p>
         </div>
       </div>
     );
-  }    
+  }
+  
 
   if (isInitialLoading) {
     return (
@@ -1798,13 +2046,11 @@ export default function App() {
         <div className="menu-container">
         <div className="menu-title-box">
           <TeamLogo className="menu-team-logo" />
-
           <span className="eyebrow">Gerenciador E Escalação</span>
           <h1>{TEAM_NAME}</h1>
           <p>
             Cadastre Jogadores, Monte Escalação E Organize O Banco De Reservas.
           </p>
-
           {currentUser && (
             <p className="logged-user-line">
               <User size={14} />
@@ -1812,8 +2058,7 @@ export default function App() {
             </p>
           )}
         </div>
-
-          <div className="menu-grid">
+        <div className="menu-grid">
           <button
             className="menu-card"
             onClick={() => setScreen('cadastro')}
@@ -1822,26 +2067,325 @@ export default function App() {
             <h2>Cadastro</h2>
             <p>Adicionar Jogadores, Editar Nome, Posição, Overall E Foto.</p>
           </button>
-
-            <button className="menu-card" onClick={() => setScreen('agenda')}>
-              <CalendarDays className="menu-icon red" />
-              <h2>Agenda</h2>
-              <p>Organizar jogos, treinos, reuniões e horários do time.</p>
+          <button className="menu-card" onClick={() => setScreen('agenda')}>
+            <CalendarDays className="menu-icon red" />
+            <h2>Agenda</h2>
+            <p>Organizar jogos, treinos, reuniões e horários do time.</p>
+          </button>
+          <button
+            className="menu-card"
+            onClick={() => setScreen('escalação')}
+          >
+            <LayoutDashboard className="menu-icon red" />
+            <h2>Escalação</h2>
+            <p>Alterar Escalação, Titulares E Banco De Reservas.</p>
+          </button>
+          {isAdmin() && (
+            <button className="menu-card" onClick={() => setScreen('usuarios')}>
+              <UserPlus className="menu-icon red" />
+              <h2>Usuários</h2>
+              <p>Cadastrar Logins De Jogadores E Administradores.</p>
             </button>
+          )}
 
-            <button
-              className="menu-card"
-              onClick={() => setScreen('escalação')}
-            >
-              <LayoutDashboard className="menu-icon red" />
-              <h2>Escalação</h2>
-              <p>Alterar Escalação, Titulares E Banco De Reservas.</p>
-            </button>
-          </div>
+          <button className="menu-card" onClick={() => setScreen('minha-conta')}>
+            <User className="menu-icon red" />
+            <h2>Minha Conta</h2>
+            <p>Alterar Senha E Ver Dados Do Usuário Logado.</p>
+          </button>
+        </div>
           <div className="menu-actions">
           <Button className="btn-dark" onClick={signOutSimple}>
           <LogOut size={16} /> Sair
           </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === 'usuarios') {
+    if (!isAdmin()) {
+      return (
+        <div className="app-screen">
+          <div className="page-wrap">
+            <header className="page-header">
+              <div>
+                <button className="back-link" onClick={() => setScreen('menu')}>
+                  <Home size={15} /> Menu Principal
+                </button>
+  
+                <h1>Acesso Negado</h1>
+                <p className="muted-text">
+                  Apenas administradores podem acessar esta tela.
+                </p>
+              </div>
+            </header>
+          </div>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="app-screen">
+        <div className="page-wrap">
+          <header className="page-header">
+            <div>
+              <button className="back-link" onClick={() => setScreen('menu')}>
+                <Home size={15} /> Menu Principal
+              </button>
+  
+              <div className="title-with-logo">
+                <TeamLogo className="page-team-logo" />
+                <h1>Usuários</h1>
+              </div>
+  
+              {usersLoading && (
+                <p className="muted-text">Sincronizando usuários...</p>
+              )}
+            </div>
+  
+            <div className="header-actions">
+              <Button className="btn-blue" onClick={loadAppUsers}>
+                <UserPlus size={16} /> Atualizar Usuários
+              </Button>
+            </div>
+          </header>
+  
+          <div className="two-columns">
+            <section className="side-card">
+              <h3>Novo Usuário</h3>
+  
+              <div className="form-grid">
+                <div className="form-group full">
+                  <label>Nome</label>
+                  <input
+                    value={newUserForm.name}
+                    onChange={(event) =>
+                      updateNewUserForm({ name: event.target.value })
+                    }
+                    placeholder="Ex: João Silva"
+                  />
+                </div>
+  
+                <div className="form-group full">
+                  <label>Usuário</label>
+                  <input
+                    value={newUserForm.username}
+                    onChange={(event) =>
+                      updateNewUserForm({
+                        username: normalizeUsername(event.target.value),
+                      })
+                    }
+                    placeholder="nome.sobrenome"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tipo</label>
+                  <select
+                    value={newUserForm.isAdmin ? 'admin' : 'player'}
+                    onChange={(event) =>
+                      updateNewUserForm({
+                        isAdmin: event.target.value === 'admin',
+                      })
+                    }
+                  >
+                    <option value="player">Jogador</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+  
+                <div className="form-group">
+                  <label>Vincular Jogador</label>
+                  <select
+                    value={newUserForm.playerId}
+                    onChange={(event) =>
+                      updateNewUserForm({ playerId: event.target.value })
+                    }
+                  >
+                    <option value="">Sem vínculo</option>
+                    {squad.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.shirtNumber ? `#${player.shirtNumber} - ` : ''}
+                        {player.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+  
+              <Button
+                className="btn-blue full-button"
+                onClick={createAppUser}
+                disabled={usersLoading}
+              >
+                <UserPlus size={16} />
+                {usersLoading ? 'Salvando...' : 'Criar Usuário'}
+              </Button>
+  
+              <p className="hint-text">
+                O usuário vai entrar usando o campo Usuário e a senha cadastrada.
+              </p>
+            </section>
+  
+            <section className="main-card">
+              <div className="agenda-head">
+                <div>
+                  <h2>Usuários Cadastrados</h2>
+                  <p className="muted-text">
+                    {appUsers.length} usuário(s) cadastrado(s)
+                  </p>
+                </div>
+              </div>
+  
+              <div className="users-list">
+                {appUsers.length === 0 && (
+                  <div className="empty-agenda">
+                    Nenhum usuário cadastrado ainda.
+                  </div>
+                )}
+  
+                {appUsers.map((user) => (
+                  <article key={user.id} className="user-card">
+                    <div>
+                      <strong>{user.name}</strong>
+  
+                      <p className="muted-text">
+                        Usuário: {user.username}
+                      </p>
+  
+                      <p className="muted-text">
+                        Tipo: {user.is_admin ? 'Administrador' : 'Jogador'} •{' '}
+                        Status: {user.active ? 'Ativo' : 'Inativo'}
+                      </p>
+                    </div>
+  
+                    <div className="user-actions">
+                      <Button
+                        className={user.is_admin ? 'btn-red-outline' : 'btn-blue'}
+                        onClick={() => toggleAppUserAdmin(user)}
+                        disabled={user.id === currentUser?.id}
+                      >
+                        {user.is_admin ? 'Remover Admin' : 'Tornar Admin'}
+                      </Button>
+  
+                      <Button
+                        className={user.active ? 'btn-red-outline' : 'btn-green'}
+                        onClick={() => toggleAppUserActive(user)}
+                        disabled={user.id === currentUser?.id}
+                      >
+                        {user.active ? 'Desativar' : 'Ativar'}
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === 'minha-conta') {
+    return (
+      <div className="app-screen">
+        <div className="page-wrap">
+          <header className="page-header">
+            <div>
+              <button className="back-link" onClick={() => setScreen('menu')}>
+                <Home size={15} /> Menu Principal
+              </button>
+  
+              <div className="title-with-logo">
+                <TeamLogo className="page-team-logo" />
+                <h1>Minha Conta</h1>
+              </div>
+  
+              <p className="muted-text">
+                Altere sua senha de acesso ao aplicativo.
+              </p>
+            </div>
+          </header>
+  
+          <div className="two-columns">
+            <section className="side-card">
+              <h3>Dados Do Usuário</h3>
+  
+              <p className="muted-text">
+                Nome: <strong>{currentUser?.name}</strong>
+              </p>
+  
+              <p className="muted-text">
+                Usuário: <strong>{currentUser?.username}</strong>
+              </p>
+  
+              <p className="muted-text">
+                Tipo:{' '}
+                <strong>{isAdmin() ? 'Administrador' : 'Jogador'}</strong>
+              </p>
+            </section>
+  
+            <section className="side-card">
+              <h3>Alterar Senha</h3>
+  
+              <div className="form-grid">
+                <div className="form-group full">
+                  <label>Senha Atual</label>
+                  <input
+                    value={accountPasswordForm.currentPassword}
+                    onChange={(event) =>
+                      updateAccountPasswordForm({
+                        currentPassword: event.target.value,
+                      })
+                    }
+                    placeholder="Digite sua senha atual"
+                    type="password"
+                  />
+                </div>
+  
+                <div className="form-group full">
+                  <label>Nova Senha</label>
+                  <input
+                    value={accountPasswordForm.newPassword}
+                    onChange={(event) =>
+                      updateAccountPasswordForm({
+                        newPassword: event.target.value,
+                      })
+                    }
+                    placeholder="Digite a nova senha"
+                    type="password"
+                  />
+                </div>
+  
+                <div className="form-group full">
+                  <label>Confirmar Nova Senha</label>
+                  <input
+                    value={accountPasswordForm.confirmPassword}
+                    onChange={(event) =>
+                      updateAccountPasswordForm({
+                        confirmPassword: event.target.value,
+                      })
+                    }
+                    placeholder="Confirme a nova senha"
+                    type="password"
+                  />
+                </div>
+              </div>
+  
+              <Button
+                className="btn-blue full-button"
+                onClick={changeMyPassword}
+                disabled={accountLoading}
+              >
+                <Save size={16} />
+                {accountLoading ? 'Alterando...' : 'Alterar Senha'}
+              </Button>
+  
+              <p className="hint-text">
+                Se o usuário foi criado agora, a senha inicial é 123.
+              </p>
+            </section>
           </div>
         </div>
       </div>

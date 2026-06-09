@@ -1593,3 +1593,31 @@ textarea::placeholder {
   font-size: 14px !important;
   font-weight: 900;
 }
+
+.users-list {
+  display: grid;
+  gap: 14px;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.user-card strong {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
