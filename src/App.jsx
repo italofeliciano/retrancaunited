@@ -933,6 +933,7 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [dataLoadedForUser, setDataLoadedForUser] = useState(null);
 
   useEffect(() => {
     initializeAuth();
@@ -946,6 +947,8 @@ export default function App() {
           await loadUserProfile(nextSession.user.id);
         } else {
           setUserProfile(null);
+          setDataLoadedForUser(null);
+          setIsInitialLoading(false);
         }
       }
     );
@@ -955,28 +958,6 @@ export default function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function loadInitialData() {
-    setIsInitialLoading(true);
-
-    try {
-      setInitialLoadingMessage('Carregando Jogadores E Escalação...');
-      await loadOnline({ silent: true });
-
-      setInitialLoadingMessage('Carregando Agenda...');
-      await loadEvents({ silent: true });
-      checkNotificationSupport();
-
-      setInitialLoadingMessage('Tudo Pronto!');
-    } catch (error) {
-      console.warn('Erro No Carregamento Inicial:', error);
-      setInitialLoadingMessage('Abrindo Aplicativo...');
-    } finally {
-      setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 450);
-    }
-  }
 
   function updatePlayer(id, patch) {
     setSquad((previousSquad) =>
@@ -1218,6 +1199,45 @@ export default function App() {
     setIsLoading(false);
   }
 
+  async function loadInitialData() {
+    setIsInitialLoading(true);
+  
+    try {
+      setInitialLoadingMessage('Carregando Jogadores E Escalação...');
+      await loadOnline({ silent: true });
+  
+      setInitialLoadingMessage('Carregando Agenda...');
+      await loadEvents({ silent: true });
+  
+      checkNotificationSupport();
+  
+      setInitialLoadingMessage('Tudo Pronto!');
+    } catch (error) {
+      console.warn('Erro No Carregamento Inicial:', error);
+      setInitialLoadingMessage('Abrindo Aplicativo...');
+    } finally {
+      setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 450);
+    }
+  }
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      return;
+    }
+  
+    if (dataLoadedForUser === session.user.id) {
+      return;
+    }
+  
+    loadInitialData().then(() => {
+      setDataLoadedForUser(session.user.id);
+    });
+  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, dataLoadedForUser]);
+
   async function initializeAuth() {
     setAuthLoading(true);
   
@@ -1226,6 +1246,7 @@ export default function App() {
     if (error) {
       console.error('Erro ao carregar sessão:', error);
       setAuthLoading(false);
+      setIsInitialLoading(false);
       return;
     }
   
@@ -1234,6 +1255,8 @@ export default function App() {
   
     if (data.session?.user) {
       await loadUserProfile(data.session.user.id);
+    } else {
+      setIsInitialLoading(false);
     }
   
     setAuthLoading(false);
@@ -1295,19 +1318,7 @@ export default function App() {
       await loadUserProfile(data.user.id);
     }
   }
-  
-  async function signOut() {
-    const confirmExit = window.confirm('Deseja sair da conta?');
-  
-    if (!confirmExit) return;
-  
-    await supabase.auth.signOut();
-    setSession(null);
-    setAuthUser(null);
-    setUserProfile(null);
-    setScreen('menu');
-  }
-  
+    
   function isAdmin() {
     const role = String(userProfile?.role || '').trim().toLowerCase();
   
@@ -1785,6 +1796,19 @@ export default function App() {
           <p className="hint-text">
             O Cadastro De Usuários Será Liberado Apenas Para Administrador.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isInitialLoading) {
+    return (
+      <div className="app-screen loading-screen">
+        <div className="loading-card">
+          <TeamLogo className="loading-team-logo" />
+          <div className="loading-spinner" />
+          <h1>{TEAM_NAME}</h1>
+          <p>{initialLoadingMessage}</p>
         </div>
       </div>
     );
