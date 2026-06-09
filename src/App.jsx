@@ -965,7 +965,7 @@ export default function App() {
     
       setLoginChecked(true);
     }, []);
-
+    
   function updatePlayer(id, patch) {
     setSquad((previousSquad) =>
       previousSquad.map((player) =>
@@ -1116,147 +1116,165 @@ async function saveOnline() {
   alert('Escalação salva online!');
 }
 
-  async function loadOnline(options = {}) {
-    const { silent = false } = options;
+async function loadOnline(options = {}) {
+  const { silent = false } = options;
 
-    setIsLoading(true);
-    setLoadError('');
-    setHasLoadedOnline(false);
+  setIsLoading(true);
+  setLoadError('');
+  setHasLoadedOnline(false);
 
-    const { data: playersData, error: playersError } = await supabase
-      .from('players')
-      .select('*')
-      .order('created_at', { ascending: true });
+  const { data: playersData, error: playersError } = await supabase
+    .from('players')
+    .select('*')
+    .order('created_at', { ascending: true });
 
-    if (playersError) {
-      setIsLoading(false);
-      setHasLoadedOnline(false);
-      setLoadError(playersError.message);
-
-      if (!silent) {
-        alert('Erro ao carregar jogadores: ' + playersError.message);
-      }
-
-      return;
-    }
-
-    const { data: stateData, error: stateError } = await supabase
-      .from('team_state')
-      .select('*')
-      .eq('id', 'retranca-united')
-      .maybeSingle();
-
-    if (stateError) {
-      setIsLoading(false);
-      setHasLoadedOnline(false);
-      setLoadError(stateError.message);
-
-      if (!silent) {
-        alert('Erro ao carregar escalação: ' + stateError.message);
-      }
-
-      return;
-    }
-
-    if (playersData && playersData.length > 0) {
-      
-    const loadedPlayers = playersData.map((player) => ({
-      id: player.id,
-      name: player.name,
-      role: player.role,
-      rating: player.rating,
-      photo: player.photo || '',
-      shirtNumber: player.shirt_number || '',
-      isCaptain: Boolean(player.is_captain),
-      preferredPosition: player.preferred_position || player.role || '',
-      secondaryPosition: player.secondary_position || '',
-    }));
-
-      setSquad(loadedPlayers);
-
-      if (stateData) {
-        const validPlayerIds = loadedPlayers.map((player) => player.id);
-
-        const safeLineupIds = (stateData.lineup_ids || []).filter((id) =>
-          validPlayerIds.includes(id)
-        );
-
-        const safeBenchIds = (stateData.bench_ids || []).filter((id) =>
-          validPlayerIds.includes(id)
-        );
-
-        const missingIds = validPlayerIds.filter(
-          (id) => !safeLineupIds.includes(id) && !safeBenchIds.includes(id)
-        );
-
-        const finalLineupIds = [...safeLineupIds, ...missingIds].slice(0, 11);
-        const finalBenchIds = [
-          ...safeBenchIds,
-          ...missingIds.filter((id) => !finalLineupIds.includes(id)),
-        ];
-
-        const formationName = stateData.formation || '4-3-3';
-
-        setFormation(formationName);
-        setLineupIds(finalLineupIds);
-        setBenchIds(finalBenchIds);
-        setPositions(
-          stateData.positions || formations[formationName] || formations['4-3-3']
-        );
-        setSelectedId(finalLineupIds[0] || loadedPlayers[0]?.id || '');
-      } else {
-        setLineupIds(loadedPlayers.slice(0, 11).map((player) => player.id));
-        setBenchIds(loadedPlayers.slice(11).map((player) => player.id));
-        setSelectedId(loadedPlayers[0]?.id || '');
-      }
-    } else {
-      setLineupIds(starterSquad.slice(0, 11).map((player) => player.id));
-      setBenchIds(starterSquad.slice(11).map((player) => player.id));
-      setSelectedId(starterSquad[0]?.id || '');
-    }
-
-    setHasLoadedOnline(true);
+  if (playersError) {
     setIsLoading(false);
+    setHasLoadedOnline(false);
+    setLoadError(playersError.message);
+
+    console.error('Erro ao carregar jogadores:', playersError);
+
+    if (!silent) {
+      alert('Erro ao carregar jogadores: ' + playersError.message);
+    }
+
+    return;
   }
 
-  async function loadInitialData() {
-    setIsInitialLoading(true);
-  
-    try {
-      setInitialLoadingMessage('Carregando Agenda...');
-      await loadEvents({ silent: true });
-      
-      setInitialLoadingMessage('Carregando Presenças...');
-      await loadEventAttendance({ silent: true });
-      
-      checkNotificationSupport();
-  
-      setInitialLoadingMessage('Tudo Pronto!');
-    } catch (error) {
-      console.warn('Erro No Carregamento Inicial:', error);
-      setInitialLoadingMessage('Abrindo Aplicativo...');
-    } finally {
-      setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 450);
+  console.log('Jogadores carregados do Supabase:', playersData);
+
+  if (!playersData || playersData.length === 0) {
+    setIsLoading(false);
+    setHasLoadedOnline(false);
+    setLoadError(
+      'Nenhum jogador foi carregado do banco. O app bloqueou o salvamento para evitar sobrescrever dados.'
+    );
+
+    if (!silent) {
+      alert(
+        'Nenhum jogador foi carregado do banco. Verifique permissões/RLS/conexão antes de salvar.'
+      );
     }
+
+    return;
   }
+
+  const { data: stateData, error: stateError } = await supabase
+    .from('team_state')
+    .select('*')
+    .eq('id', 'retranca-united')
+    .maybeSingle();
+
+  if (stateError) {
+    setIsLoading(false);
+    setHasLoadedOnline(false);
+    setLoadError(stateError.message);
+
+    console.error('Erro ao carregar escalação:', stateError);
+
+    if (!silent) {
+      alert('Erro ao carregar escalação: ' + stateError.message);
+    }
+
+    return;
+  }
+
+  const loadedPlayers = playersData.map((player) => ({
+    id: player.id,
+    name: player.name,
+    role: player.role,
+    rating: player.rating,
+    photo: player.photo || '',
+    shirtNumber: player.shirt_number || '',
+    isCaptain: Boolean(player.is_captain),
+    preferredPosition: player.preferred_position || player.role || '',
+    secondaryPosition: player.secondary_position || '',
+  }));
+
+  setSquad(loadedPlayers);
+
+  if (stateData) {
+    const validPlayerIds = loadedPlayers.map((player) => player.id);
+
+    const safeLineupIds = (stateData.lineup_ids || []).filter((id) =>
+      validPlayerIds.includes(id)
+    );
+
+    const safeBenchIds = (stateData.bench_ids || []).filter((id) =>
+      validPlayerIds.includes(id)
+    );
+
+    const missingIds = validPlayerIds.filter(
+      (id) => !safeLineupIds.includes(id) && !safeBenchIds.includes(id)
+    );
+
+    const finalLineupIds = [...safeLineupIds, ...missingIds].slice(0, 11);
+
+    const finalBenchIds = [
+      ...safeBenchIds,
+      ...missingIds.filter((id) => !finalLineupIds.includes(id)),
+    ];
+
+    const formationName = stateData.formation || '4-3-3';
+
+    setFormation(formationName);
+    setLineupIds(finalLineupIds);
+    setBenchIds(finalBenchIds);
+    setPositions(
+      stateData.positions || formations[formationName] || formations['4-3-3']
+    );
+    setSelectedId(finalLineupIds[0] || loadedPlayers[0]?.id || '');
+  } else {
+    setLineupIds(loadedPlayers.slice(0, 11).map((player) => player.id));
+    setBenchIds(loadedPlayers.slice(11).map((player) => player.id));
+    setSelectedId(loadedPlayers[0]?.id || '');
+  }
+
+  setHasLoadedOnline(true);
+  setIsLoading(false);
+}
+
+async function loadInitialData() {
+  setIsInitialLoading(true);
+
+  try {
+    setInitialLoadingMessage('Carregando Jogadores E Escalação...');
+    await loadOnline({ silent: true });
+
+    setInitialLoadingMessage('Carregando Agenda...');
+    await loadEvents({ silent: true });
+
+    setInitialLoadingMessage('Carregando Presenças...');
+    await loadEventAttendance({ silent: true });
+
+    checkNotificationSupport();
+
+    setInitialLoadingMessage('Tudo Pronto!');
+  } catch (error) {
+    console.warn('Erro No Carregamento Inicial:', error);
+    setInitialLoadingMessage('Abrindo Aplicativo...');
+  } finally {
+    setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 450);
+  }
+}
 
   useEffect(() => {
     if (!currentUser?.id) {
       return;
     }
   
-    if (dataLoadedForUser === currentUser.id) {
-      return;
+    async function syncAfterLogin() {
+      await loadInitialData();
+      setDataLoadedForUser(currentUser.id);
     }
   
-    loadInitialData().then(() => {
-      setDataLoadedForUser(currentUser.id);
-    });
+    syncAfterLogin();
   
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id, dataLoadedForUser]);
+  }, [currentUser?.id]);
   
   useEffect(() => {
     if (screen !== 'usuarios') {
