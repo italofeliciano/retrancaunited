@@ -15,6 +15,9 @@ import {
   Clock,
   Pencil,
   CheckCircle,
+  LogIn,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './App.css';
@@ -920,14 +923,36 @@ export default function App() {
 
   const selectedPlayer = squad.find((player) => player.id === selectedId);
   const lineupPlayers = lineupIds.map((id) =>
-    squad.find((player) => player.id === id)
-  );
+    squad.find((player) => player.id === id));
   const benchPlayers = benchIds.map((id) =>
-    squad.find((player) => player.id === id)
-  );
+    squad.find((player) => player.id === id));
+  const [session, setSession] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    loadInitialData();
+    initializeAuth();
+  
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, nextSession) => {
+        setSession(nextSession);
+        setAuthUser(nextSession?.user || null);
+  
+        if (nextSession?.user) {
+          await loadUserProfile(nextSession.user.id);
+        } else {
+          setUserProfile(null);
+        }
+      }
+    );
+  
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1193,6 +1218,102 @@ export default function App() {
     setIsLoading(false);
   }
 
+  async function initializeAuth() {
+    setAuthLoading(true);
+  
+    const { data, error } = await supabase.auth.getSession();
+  
+    if (error) {
+      console.error('Erro ao carregar sessão:', error);
+      setAuthLoading(false);
+      return;
+    }
+  
+    setSession(data.session);
+    setAuthUser(data.session?.user || null);
+  
+    if (data.session?.user) {
+      await loadUserProfile(data.session.user.id);
+    }
+  
+    setAuthLoading(false);
+  }
+  
+  async function signOut() {
+    const confirmExit = window.confirm('Deseja sair da conta?');
+  
+    if (!confirmExit) return;
+  
+    await supabase.auth.signOut();
+  
+    setSession(null);
+    setAuthUser(null);
+    setUserProfile(null);
+    setScreen('menu');
+  }
+
+  async function loadUserProfile(userId) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+  
+    if (error) {
+      console.error('Erro ao carregar perfil:', error);
+      setUserProfile(null);
+      return;
+    }
+  
+    setUserProfile(data);
+  }
+  
+  async function signIn() {
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      alert('Digite Email E Senha.');
+      return;
+    }
+  
+    setLoginLoading(true);
+  
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail.trim(),
+      password: loginPassword,
+    });
+  
+    setLoginLoading(false);
+  
+    if (error) {
+      alert('Erro ao entrar: ' + error.message);
+      return;
+    }
+  
+    setSession(data.session);
+    setAuthUser(data.user);
+  
+    if (data.user) {
+      await loadUserProfile(data.user.id);
+    }
+  }
+  
+  async function signOut() {
+    const confirmExit = window.confirm('Deseja sair da conta?');
+  
+    if (!confirmExit) return;
+  
+    await supabase.auth.signOut();
+    setSession(null);
+    setAuthUser(null);
+    setUserProfile(null);
+    setScreen('menu');
+  }
+  
+  function isAdmin() {
+    const role = String(userProfile?.role || '').trim().toLowerCase();
+  
+    return role === 'admin' || role === 'administrador';
+  }
+  
   async function loadEvents(options = {}) {
     const { silent = false } = options;
 
@@ -1603,14 +1724,67 @@ export default function App() {
 
   const saveButtonDisabled = isLoading || !hasLoadedOnline || Boolean(loadError);
 
-  if (isInitialLoading) {
+  if (authLoading) {
     return (
       <div className="app-screen loading-screen">
         <div className="loading-card">
-        <TeamLogo className="loading-team-logo" />
           <div className="loading-spinner" />
           <h1>{TEAM_NAME}</h1>
-          <p>{initialLoadingMessage}</p>
+          <p>Verificando Login...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!session) {
+    return (
+      <div className="app-screen login-screen">
+        <div className="login-card">
+          <TeamLogo className="login-team-logo" />
+  
+          <span className="eyebrow">Área Do Time</span>
+          <h1>{TEAM_NAME}</h1>
+          <p>Entre Com Seu Email E Senha Para Acessar O Aplicativo.</p>
+  
+          <div className="login-form">
+            <div className="form-group full">
+              <label>Email</label>
+              <input
+                value={loginEmail}
+                onChange={(event) => setLoginEmail(event.target.value)}
+                placeholder="seuemail@exemplo.com"
+                type="email"
+              />
+            </div>
+  
+            <div className="form-group full">
+              <label>Senha</label>
+              <input
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                placeholder="Digite Sua Senha"
+                type="password"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    signIn();
+                  }
+                }}
+              />
+            </div>
+  
+            <Button
+              className="btn-blue full-button"
+              onClick={signIn}
+              disabled={loginLoading}
+            >
+              <LogIn size={16} />
+              {loginLoading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </div>
+  
+          <p className="hint-text">
+            O Cadastro De Usuários Será Liberado Apenas Para Administrador.
+          </p>
         </div>
       </div>
     );
@@ -1620,26 +1794,32 @@ export default function App() {
     return (
       <div className="app-screen menu-screen">
         <div className="menu-container">
-          <div className="menu-title-box">
-            <span className="eyebrow">Gerenciador e Escalação</span>
-            <TeamLogo className="menu-team-logo" />
-            <h1>{TEAM_NAME}</h1>
-            <p>
-              Cadastre jogadores, monte escalação e organize o banco de
-              reservas.
+        <div className="menu-title-box">
+          <TeamLogo className="menu-team-logo" />
+
+          <span className="eyebrow">Gerenciador E Escalação</span>
+          <h1>{TEAM_NAME}</h1>
+          <p>
+            Cadastre Jogadores, Monte Escalação E Organize O Banco De Reservas.
+          </p>
+
+          {userProfile && (
+            <p className="logged-user-line">
+              <User size={14} />
+              Logado Como {userProfile.name} • {isAdmin() ? 'Administrador' : 'Jogador'}
             </p>
-            {isLoading && <p className="muted-text">Sincronizando dados...</p>}
-            {loadError && (
-              <p className="muted-text">Erro ao sincronizar. Atualize a página.</p>
-            )}
-          </div>
+          )}
+        </div>
 
           <div className="menu-grid">
-            <button className="menu-card" onClick={() => setScreen('cadastro')}>
-              <ClipboardList className="menu-icon red" />
-              <h2>Cadastro</h2>
-              <p>Adicionar jogadores, editar nome, posição, overall e foto.</p>
-            </button>
+          <button
+            className="menu-card"
+            onClick={() => setScreen('cadastro')}
+          >
+            <ClipboardList className="menu-icon red" />
+            <h2>Cadastro</h2>
+            <p>Adicionar Jogadores, Editar Nome, Posição, Overall E Foto.</p>
+          </button>
 
             <button className="menu-card" onClick={() => setScreen('agenda')}>
               <CalendarDays className="menu-icon red" />
@@ -1647,11 +1827,19 @@ export default function App() {
               <p>Organizar jogos, treinos, reuniões e horários do time.</p>
             </button>
 
-            <button className="menu-card" onClick={() => setScreen('escalação')}>
+            <button
+              className="menu-card"
+              onClick={() => setScreen('escalação')}
+            >
               <LayoutDashboard className="menu-icon red" />
               <h2>Escalação</h2>
-              <p>Alterar escalação, titulares e banco de reservas.</p>
+              <p>Alterar Escalação, Titulares E Banco De Reservas.</p>
             </button>
+          </div>
+          <div className="menu-actions">
+            <Button className="btn-dark" onClick={signOut}>
+              <LogOut size={16} /> Sair
+            </Button>
           </div>
         </div>
       </div>
