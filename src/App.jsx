@@ -919,6 +919,8 @@ export default function App() {
   const [initialLoadingMessage, setInitialLoadingMessage] = useState(
     'Carregando informações...'
   );
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState('not-supported');
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -982,6 +984,11 @@ export default function App() {
   }
 
   function addPlayer() {
+    if (!canManagePlayers()) {
+      alert('Apenas administrador pode adicionar jogadores.');
+      return;
+    }
+  
     const newPlayer = {
       id: `jogador-${Date.now()}`,
       name: 'Novo jogador',
@@ -993,13 +1000,17 @@ export default function App() {
       preferredPosition: 'ATA',
       secondaryPosition: '',
     };
-
+  
     setSquad((previousSquad) => [...previousSquad, newPlayer]);
     setBenchIds((previousBenchIds) => [...previousBenchIds, newPlayer.id]);
     setSelectedId(newPlayer.id);
   }
 
   function removePlayer(id) {
+    if (!canManagePlayers()) {
+      alert('Apenas administrador pode remover jogadores.');
+      return;
+    }
     setSquad((previousSquad) =>
       previousSquad.filter((player) => player.id !== id)
     );
@@ -1025,81 +1036,85 @@ export default function App() {
     reader.readAsDataURL(file);
   }
 
-  function changeFormation(nextFormation) {
-    setFormation(nextFormation);
-    setPositions(formations[nextFormation] || formations['4-3-3']);
+function changeFormation(nextFormation) {
+  setFormation(nextFormation);
+  setPositions(formations[nextFormation] || formations['4-3-3']);
+}
+
+async function saveOnline() {
+  if (!canManageLineup()) {
+    alert('Apenas administrador pode salvar alterações online.');
+    return;
   }
 
-  async function saveOnline() {
-    if (!hasLoadedOnline) {
-      alert('Aguarde o app carregar os dados online antes de salvar.');
-      return;
-    }
-
-    if (loadError) {
-      alert(
-        'Não foi possível carregar os dados online. Para evitar apagar dados, o salvamento foi bloqueado. Atualize a página e tente novamente.'
-      );
-      return;
-    }
-
-    const confirmSave = window.confirm(
-      'Deseja salvar a escalação atual no banco online? Isso vai atualizar os dados para todos que usam o app.'
-    );
-
-    if (!confirmSave) return;
-
-    setIsLoading(true);
-
- 
-    const playersToSave = squad.map((player) => ({
-      id: player.id,
-      name: player.name || 'Sem nome',
-      role: player.role || 'ATA',
-      rating: player.rating || '80',
-      photo: player.photo || null,
-      shirt_number: player.shirtNumber || null,
-      is_captain: Boolean(player.isCaptain),
-      preferred_position: player.preferredPosition || player.role || null,
-      secondary_position: player.secondaryPosition || null,
-    }));
-
-    for (let index = 0; index < playersToSave.length; index += 5) {
-      const playersChunk = playersToSave.slice(index, index + 5);
-    
-      const { error: playersError } = await supabase
-        .from('players')
-        .upsert(playersChunk, { onConflict: 'id' });
-    
-      if (playersError) {
-        setIsLoading(false);
-        alert('Erro ao salvar jogadores: ' + playersError.message);
-        return;
-      }
-    }
-
-    const { error: stateError } = await supabase.from('team_state').upsert(
-      {
-        id: 'retranca-united',
-        team_name: TEAM_NAME,
-        formation,
-        lineup_ids: lineupIds,
-        bench_ids: benchIds,
-        positions,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-
-    setIsLoading(false);
-
-    if (stateError) {
-      alert('Erro ao salvar escalação: ' + stateError.message);
-      return;
-    }
-
-    alert('Escalação salva online!');
+  if (!hasLoadedOnline) {
+    alert('Aguarde o app carregar os dados online antes de salvar.');
+    return;
   }
+
+  if (loadError) {
+    alert(
+      'Não foi possível carregar os dados online. Para evitar apagar dados, o salvamento foi bloqueado. Atualize a página e tente novamente.'
+    );
+    return;
+  }
+
+  const confirmSave = window.confirm(
+    'Deseja salvar a escalação atual no banco online? Isso vai atualizar os dados para todos que usam o app.'
+  );
+
+  if (!confirmSave) return;
+
+  setIsLoading(true);
+
+  const playersToSave = squad.map((player) => ({
+    id: player.id,
+    name: player.name || 'Sem nome',
+    role: player.role || 'ATA',
+    rating: player.rating || '80',
+    photo: player.photo || null,
+    shirt_number: player.shirtNumber || null,
+    is_captain: Boolean(player.isCaptain),
+    preferred_position: player.preferredPosition || player.role || null,
+    secondary_position: player.secondaryPosition || null,
+  }));
+
+  for (let index = 0; index < playersToSave.length; index += 5) {
+    const playersChunk = playersToSave.slice(index, index + 5);
+
+    const { error: playersError } = await supabase
+      .from('players')
+      .upsert(playersChunk, { onConflict: 'id' });
+
+    if (playersError) {
+      setIsLoading(false);
+      alert('Erro ao salvar jogadores: ' + playersError.message);
+      return;
+    }
+  }
+
+  const { error: stateError } = await supabase.from('team_state').upsert(
+    {
+      id: 'retranca-united',
+      team_name: TEAM_NAME,
+      formation,
+      lineup_ids: lineupIds,
+      bench_ids: benchIds,
+      positions,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
+
+  setIsLoading(false);
+
+  if (stateError) {
+    alert('Erro ao salvar escalação: ' + stateError.message);
+    return;
+  }
+
+  alert('Escalação salva online!');
+}
 
   async function loadOnline(options = {}) {
     const { silent = false } = options;
@@ -1208,12 +1223,12 @@ export default function App() {
     setIsInitialLoading(true);
   
     try {
-      setInitialLoadingMessage('Carregando Jogadores E Escalação...');
-      await loadOnline({ silent: true });
-  
       setInitialLoadingMessage('Carregando Agenda...');
       await loadEvents({ silent: true });
-  
+      
+      setInitialLoadingMessage('Carregando Presenças...');
+      await loadEventAttendance({ silent: true });
+      
       checkNotificationSupport();
   
       setInitialLoadingMessage('Tudo Pronto!');
@@ -1278,31 +1293,24 @@ export default function App() {
   
     const { data, error } = await supabase
       .from('app_users')
-      .select('*')
+      .select('id, username, password_text, name, is_admin, player_id, active')
       .ilike('username', username)
       .maybeSingle();
   
     setLoginLoading(false);
   
     if (error) {
-      alert('Erro ao buscar usuário: ' + error.message);
+      alert('Erro ao buscar usuário. Tente novamente.');
       return;
     }
   
-    if (!data) {
-      alert(`Usuário Não Encontrado: ${username}`);
-      return;
-    }
-  
-    if (!data.active) {
-      alert('Usuário Encontrado, Mas Está Inativo.');
+    if (!data || !data.active) {
+      alert('Usuário Ou Senha Inválidos.');
       return;
     }
   
     if (String(data.password_text || '').trim() !== password) {
-      alert(
-        `Senha Não Bate. Banco: "${data.password_text}" | Digitada: "${password}"`
-      );
+      alert('Usuário Ou Senha Inválidos.');
       return;
     }
   
@@ -1549,6 +1557,22 @@ export default function App() {
   function isAdmin() {
     return Boolean(currentUser?.is_admin);
   }
+
+  function canManagePlayers() {
+    return isAdmin();
+  }
+  
+  function canManageLineup() {
+    return isAdmin();
+  }
+  
+  function canManageEvents() {
+    return isAdmin();
+  }
+  
+  function canManageUsers() {
+    return isAdmin();
+  }
   
   async function loadEvents(options = {}) {
     const { silent = false } = options;
@@ -1586,6 +1610,87 @@ export default function App() {
     }));
 
     setEvents(sortEventsByDate(loadedEvents));
+  }
+
+  async function loadEventAttendance(options = {}) {
+    const { silent = false } = options;
+  
+    setAttendanceLoading(true);
+  
+    const { data, error } = await supabase
+      .from('event_attendance')
+      .select('*')
+      .order('created_at', { ascending: true });
+  
+    setAttendanceLoading(false);
+  
+    if (error) {
+      console.error('Erro ao carregar presença:', error);
+  
+      if (!silent) {
+        alert('Erro ao carregar presença: ' + error.message);
+      }
+  
+      return;
+    }
+  
+    setAttendanceRecords(data || []);
+  }
+  
+  function getEventAttendance(eventId) {
+    return attendanceRecords.filter((record) => record.event_id === eventId);
+  }
+  
+  function getEventAttendanceByResponse(eventId, response) {
+    return getEventAttendance(eventId).filter(
+      (record) => record.response === response
+    );
+  }
+  
+  function getMyAttendance(eventId) {
+    return attendanceRecords.find(
+      (record) =>
+        record.event_id === eventId && record.app_user_id === currentUser?.id
+    );
+  }
+  
+  function getAttendanceLabel(response) {
+    if (response === 'vou') return 'Vou';
+    if (response === 'talvez') return 'Talvez';
+    if (response === 'nao') return 'Não Vou';
+  
+    return 'Sem Resposta';
+  }
+  
+  async function saveMyAttendance(eventId, response) {
+    if (!currentUser?.id) {
+      alert('Faça login para confirmar presença.');
+      return;
+    }
+  
+    setAttendanceLoading(true);
+  
+    const { error } = await supabase.from('event_attendance').upsert(
+      {
+        event_id: eventId,
+        app_user_id: currentUser.id,
+        user_name: currentUser.name,
+        username: currentUser.username,
+        response,
+      },
+      {
+        onConflict: 'event_id,app_user_id',
+      }
+    );
+  
+    setAttendanceLoading(false);
+  
+    if (error) {
+      alert('Erro ao confirmar presença: ' + error.message);
+      return;
+    }
+  
+    await loadEventAttendance({ silent: true });
   }
 
   function checkNotificationSupport() {
@@ -1678,8 +1783,13 @@ export default function App() {
   }
 
   function startEditEvent(event) {
+    if (!canManageEvents()) {
+      alert('Apenas administrador pode editar eventos.');
+      return;
+    }
+  
     setEditingEventId(event.id);
-
+  
     setEventForm({
       title: event.title || '',
       eventType: event.eventType || 'treino',
@@ -1698,6 +1808,10 @@ export default function App() {
   }
 
   async function saveEvent() {
+    if (!canManageEvents()) {
+      alert('Apenas administrador pode criar ou editar eventos.');
+      return;
+    }
     if (!eventForm.title.trim()) {
       alert('Digite o título do evento.');
       return;
@@ -1743,6 +1857,10 @@ export default function App() {
   }
 
   async function removeEvent(id) {
+    if (!canManageEvents()) {
+      alert('Apenas administrador pode excluir eventos.');
+      return;
+    }
     const confirmDelete = window.confirm('Deseja excluir este evento da agenda?');
 
     if (!confirmDelete) {
@@ -1768,6 +1886,10 @@ export default function App() {
   }
 
   async function completeEvent(id) {
+    if (!canManageEvents()) {
+      alert('Apenas administrador pode concluir eventos.');
+      return;
+    }
     const confirmComplete = window.confirm(
       'Deseja marcar este evento como concluído?'
     );
@@ -2059,36 +2181,50 @@ export default function App() {
           )}
         </div>
         <div className="menu-grid">
+          {canManagePlayers() && (
+            <button
+              className="menu-card"
+              onClick={() => setScreen('cadastro')}
+            >
+              <ClipboardList className="menu-icon red" />
+              <h2>Cadastro</h2>
+              <p>Adicionar Jogadores, Editar Nome, Posição, Overall E Foto.</p>
+            </button>
+          )}
+
           <button
             className="menu-card"
-            onClick={() => setScreen('cadastro')}
+            onClick={() => setScreen('agenda')}
           >
-            <ClipboardList className="menu-icon red" />
-            <h2>Cadastro</h2>
-            <p>Adicionar Jogadores, Editar Nome, Posição, Overall E Foto.</p>
-          </button>
-          <button className="menu-card" onClick={() => setScreen('agenda')}>
             <CalendarDays className="menu-icon red" />
             <h2>Agenda</h2>
-            <p>Organizar jogos, treinos, reuniões e horários do time.</p>
+            <p>Organizar Jogos, Treinos, Reuniões E Horários Do Time.</p>
           </button>
+
           <button
             className="menu-card"
             onClick={() => setScreen('escalação')}
           >
             <LayoutDashboard className="menu-icon red" />
             <h2>Escalação</h2>
-            <p>Alterar Escalação, Titulares E Banco De Reservas.</p>
+            <p>Visualizar Escalação, Titulares E Banco De Reservas.</p>
           </button>
-          {isAdmin() && (
-            <button className="menu-card" onClick={() => setScreen('usuarios')}>
+
+          {canManageUsers() && (
+            <button
+              className="menu-card"
+              onClick={() => setScreen('usuarios')}
+            >
               <UserPlus className="menu-icon red" />
               <h2>Usuários</h2>
               <p>Cadastrar Logins De Jogadores E Administradores.</p>
             </button>
           )}
 
-          <button className="menu-card" onClick={() => setScreen('minha-conta')}>
+          <button
+            className="menu-card"
+            onClick={() => setScreen('minha-conta')}
+          >
             <User className="menu-icon red" />
             <h2>Minha Conta</h2>
             <p>Alterar Senha E Ver Dados Do Usuário Logado.</p>
@@ -2146,9 +2282,15 @@ export default function App() {
             </div>
   
             <div className="header-actions">
-              <Button className="btn-blue" onClick={loadAppUsers}>
-                <UserPlus size={16} /> Atualizar Usuários
-              </Button>
+            <Button
+              className="btn-blue"
+              onClick={async () => {
+                await loadEvents();
+                await loadEventAttendance();
+              }}
+            >
+              <CalendarDays size={16} /> Atualizar agenda
+            </Button>
             </div>
           </header>
   
@@ -2536,6 +2678,7 @@ export default function App() {
           </header>
 
           <div className="agenda-layout">
+          {canManageEvents() && (
             <section className="side-card agenda-form-card">
               <h3>{editingEventId ? 'Editar evento' : 'Novo evento'}</h3>
 
@@ -2638,6 +2781,7 @@ export default function App() {
                 )}
               </div>
             </section>
+              )}
 
             <section className="main-card">
               <div className="agenda-head">
@@ -2686,6 +2830,109 @@ export default function App() {
                       {event.description && (
                         <p className="event-description">{event.description}</p>
                       )}
+
+                      <div className="attendance-box">
+
+                      <div className="attendance-head">
+                        <strong>Minha Presença</strong>
+
+                        <span className="attendance-current-status">
+                          {getMyAttendance(event.id)
+                            ? getAttendanceLabel(getMyAttendance(event.id).response)
+                            : 'Sem Resposta'}
+                        </span>
+                      </div>
+                        <div className="attendance-actions">
+                          <button
+                            type="button"
+                            className={`attendance-choice going ${
+                              getMyAttendance(event.id)?.response === 'vou' ? 'active' : ''
+                            }`}
+                            onClick={() => saveMyAttendance(event.id, 'vou')}
+                            disabled={attendanceLoading}
+                          >
+                            Vou
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`attendance-choice maybe ${
+                              getMyAttendance(event.id)?.response === 'talvez' ? 'active' : ''
+                            }`}
+                            onClick={() => saveMyAttendance(event.id, 'talvez')}
+                            disabled={attendanceLoading}
+                          >
+                            Talvez
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`attendance-choice no ${
+                              getMyAttendance(event.id)?.response === 'nao' ? 'active' : ''
+                            }`}
+                            onClick={() => saveMyAttendance(event.id, 'nao')}
+                            disabled={attendanceLoading}
+                          >
+                            Não Vou
+                          </button>
+                        </div>
+
+                        <div className="attendance-lists">
+                          <div className="attendance-list">
+                            <strong>
+                              Confirmados ({getEventAttendanceByResponse(event.id, 'vou').length})
+                            </strong>
+
+                            <div>
+                              {getEventAttendanceByResponse(event.id, 'vou').length === 0 ? (
+                                <span className="attendance-empty">Ninguém ainda</span>
+                              ) : (
+                                getEventAttendanceByResponse(event.id, 'vou').map((record) => (
+                                  <span key={record.id} className="attendance-name">
+                                    {record.user_name}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="attendance-list">
+                            <strong>
+                              Talvez ({getEventAttendanceByResponse(event.id, 'talvez').length})
+                            </strong>
+
+                            <div>
+                              {getEventAttendanceByResponse(event.id, 'talvez').length === 0 ? (
+                                <span className="attendance-empty">Ninguém ainda</span>
+                              ) : (
+                                getEventAttendanceByResponse(event.id, 'talvez').map((record) => (
+                                  <span key={record.id} className="attendance-name maybe">
+                                    {record.user_name}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="attendance-list">
+                            <strong>
+                              Não Vão ({getEventAttendanceByResponse(event.id, 'nao').length})
+                            </strong>
+
+                            <div>
+                              {getEventAttendanceByResponse(event.id, 'nao').length === 0 ? (
+                                <span className="attendance-empty">Ninguém ainda</span>
+                              ) : (
+                                getEventAttendanceByResponse(event.id, 'nao').map((record) => (
+                                  <span key={record.id} className="attendance-name no">
+                                    {record.user_name}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="event-side">
@@ -2693,33 +2940,35 @@ export default function App() {
                         {eventStatusLabels[event.status] || event.status}
                       </span>
 
-                      <div className="event-actions">
-                        {event.status !== 'concluido' && (
+                      {canManageEvents() && (
+                        <div className="event-actions">
+                          {event.status !== 'concluido' && (
+                            <button
+                              className="icon-action success"
+                              onClick={() => completeEvent(event.id)}
+                              title="Concluir evento"
+                            >
+                              <CheckCircle size={17} />
+                            </button>
+                          )}
+
                           <button
-                            className="icon-action success"
-                            onClick={() => completeEvent(event.id)}
-                            title="Concluir evento"
+                            className="icon-action"
+                            onClick={() => startEditEvent(event)}
+                            title="Editar evento"
                           >
-                            <CheckCircle size={17} />
+                            <Pencil size={17} />
                           </button>
-                        )}
 
-                        <button
-                          className="icon-action"
-                          onClick={() => startEditEvent(event)}
-                          title="Editar evento"
-                        >
-                          <Pencil size={17} />
-                        </button>
-
-                        <button
-                          className="icon-action danger"
-                          onClick={() => removeEvent(event.id)}
-                          title="Excluir evento"
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
+                          <button
+                            className="icon-action danger"
+                            onClick={() => removeEvent(event.id)}
+                            title="Excluir evento"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -2856,15 +3105,21 @@ export default function App() {
 
           <div className="side-card">
             <h3>Ações</h3>
+            {!canManageLineup() && (
+                <p className="hint-text">
+                  Você pode testar formações, mover jogadores e exportar a imagem. Apenas administradores podem salvar online.
+                </p>
+           )}
 
             <div className="save-grid vertical-actions">
-              <Button
-                className="btn-blue"
-                onClick={saveOnline}
-                disabled={saveButtonDisabled}
-              >
-                <Save size={16} /> Salvar alterações
-              </Button>
+
+            <Button
+              className="btn-blue"
+              onClick={saveOnline}
+              disabled={saveButtonDisabled || !canManageLineup()}
+            >
+              <Save size={16} /> Salvar alterações
+            </Button>
 
               <Button className="btn-red-outline" onClick={exportLineupImage}>
                 <Download size={16} /> Exportar escalação
