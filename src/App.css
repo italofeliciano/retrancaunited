@@ -1770,3 +1770,18 @@ textarea::placeholder {
   font-size: 11px;
   font-weight: 750;
 }
+.btn-red {
+  background-color: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+
+.btn-red:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-red:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

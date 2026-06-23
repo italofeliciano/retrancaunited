@@ -1480,6 +1480,56 @@ async function loadInitialData() {
     await loadAppUsers();
   }
 
+  async function deleteAppUser(user) {
+    if (!isAdmin()) {
+      alert('Apenas administrador pode excluir usuários.');
+      return;
+    }
+  
+    if (user.id === currentUser?.id) {
+      alert('Você não pode excluir o próprio usuário logado.');
+      return;
+    }
+  
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir o usuário "${user.name}"?\n\nEssa ação não poderá ser desfeita.`
+    );
+  
+    if (!confirmDelete) {
+      return;
+    }
+  
+    setUsersLoading(true);
+  
+    const { error: attendanceError } = await supabase
+      .from('event_attendance')
+      .delete()
+      .eq('app_user_id', user.id);
+  
+    if (attendanceError) {
+      setUsersLoading(false);
+      alert('Erro ao remover presenças do usuário: ' + attendanceError.message);
+      return;
+    }
+  
+    const { error } = await supabase
+      .from('app_users')
+      .delete()
+      .eq('id', user.id);
+  
+    setUsersLoading(false);
+  
+    if (error) {
+      alert('Erro ao excluir usuário: ' + error.message);
+      return;
+    }
+  
+    await loadAppUsers();
+    await loadEventAttendance({ silent: true });
+  
+    alert('Usuário excluído com sucesso!');
+  }
+
   async function changeMyPassword() {
     if (!currentUser?.id) {
       alert('Usuário não encontrado.');
@@ -2597,6 +2647,7 @@ async function loadInitialData() {
                     placeholder="nome.sobrenome"
                   />
                 </div>
+  
                 <div className="form-group">
                   <label>Tipo</label>
                   <select
@@ -2681,7 +2732,7 @@ async function loadInitialData() {
                       <Button
                         className={user.is_admin ? 'btn-red-outline' : 'btn-blue'}
                         onClick={() => toggleAppUserAdmin(user)}
-                        disabled={user.id === currentUser?.id}
+                        disabled={user.id === currentUser?.id || usersLoading}
                       >
                         {user.is_admin ? 'Remover Admin' : 'Tornar Admin'}
                       </Button>
@@ -2689,9 +2740,18 @@ async function loadInitialData() {
                       <Button
                         className={user.active ? 'btn-red-outline' : 'btn-green'}
                         onClick={() => toggleAppUserActive(user)}
-                        disabled={user.id === currentUser?.id}
+                        disabled={user.id === currentUser?.id || usersLoading}
                       >
                         {user.active ? 'Desativar' : 'Ativar'}
+                      </Button>
+  
+                      <Button
+                        className="btn-red"
+                        onClick={() => deleteAppUser(user)}
+                        disabled={user.id === currentUser?.id || usersLoading}
+                      >
+                        <Trash2 size={16} />
+                        Excluir
                       </Button>
                     </div>
                   </article>
